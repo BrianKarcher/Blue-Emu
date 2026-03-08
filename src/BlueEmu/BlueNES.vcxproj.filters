@@ -1,0 +1,322 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{a3882fc9-d406-45fe-9a0d-ff62dc0577c9}</UniqueIdentifier>
+      <Extensions>chr</Extensions>
+    </Filter>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{5ad83198-9ac7-4bb1-a3d8-3f765b6af48c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="config">
+      <UniqueIdentifier>{dd0a18ef-f66f-4e06-8bb5-34b720d3cc43}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Mappers">
+      <UniqueIdentifier>{2a6b8914-8546-4ca3-995a-70aafe05a64c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CPU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="INESLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PPU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Bus.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Cartridge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HexViewer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioBackend.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Input.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PPUViewer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RendererLoopy.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Nes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EmulatorCore.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioMapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="InputMappers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CartMapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Serializer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DebuggerUI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DebuggerContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SharedContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CNROM.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="Mapper.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="MapperBase.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="UxROMMapper.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="NROM.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="MMC3.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="MMC1.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="AxROMMapper.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="MMC2Mapper.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="DxROM.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="SDL_UI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\imgui_draw.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\backends\imgui_impl_opengl3.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\backends\imgui_impl_sdl2.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\imgui_tables.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\imgui_widgets.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\file\ImGuiFileDialog.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="main.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CPU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="INESLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PPU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Bus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Cartridge.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Core.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HexViewer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="APU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioBackend.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Input.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PPUViewer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RendererLoopy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="A12Mapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Nes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EmulatorCore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SharedContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CommandQueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioRingBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RAMMapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioMapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="InputMappers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CartMapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="OpenBusMapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Serializer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DebuggerUI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DebuggerContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UxROMMapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MMC3.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MMC1.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryMapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MapperBase.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="CNROM.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="AxROMMapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="NROM.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="Mapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MMC2Mapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DxROM.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="SDL_UI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\file\dirent\dirent.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\imconfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\imgui.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\backends\imgui_impl_opengl3.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\backends\imgui_impl_opengl3_loader.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\backends\imgui_impl_sdl2.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\file\ImGuiFileDialog.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\file\ImGuiFileDialogConfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\imstb_rectpack.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\imstb_textedit.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\imstb_truetype.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="BlueNES.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\readme.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\..\..\Downloads\icons8-play-50.png" />
+    <Image Include="Images\empty-circle.png" />
+    <Image Include="Images\filled-circle.png" />
+    <Image Include="Images\pause.png" />
+    <Image Include="Images\play.png" />
+    <Image Include="toolbar1.bmp" />
+  </ItemGroup>
+</Project>

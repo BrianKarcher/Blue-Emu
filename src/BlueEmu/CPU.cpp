@@ -1,0 +1,823 @@
+#include "Bus.h"
+#include <Windows.h>
+#include "PPU.h"
+#include "RendererLoopy.h"
+#include "OpenBusMapper.h"
+#include "Serializer.h"
+#include "DebuggerContext.h"
+#include "SharedContext.h"
+#include "CPU.h"
+
+#include <thread>
+#include <chrono>
+
+CPU::CPU(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg, PPU& ppu) : openBus(openBus), sharedCtx(ctx), dbgCtx(dbg), ppu(ppu) {
+	init_cpu();
+}
+
+void CPU::connectBus(Bus* bus) {
+	this->bus = bus;
+}
+
+bool CPU::ShouldPause() {
+	if (dbgCtx.HasBreakpoint(m_pc) && !dbgCtx.is_paused.load(std::memory_order_relaxed)) {
+		dbgCtx.is_paused.store(true);
+		dbgCtx.LogInstructionFetch(m_pc);
+		dbgCtx.lastState.a = m_a;
+		dbgCtx.lastState.x = m_x;
+		dbgCtx.lastState.y = m_y;
+		dbgCtx.lastState.sp = m_sp;
+		dbgCtx.lastState.p = m_p;
+		dbgCtx.lastState.pc = m_pc; // Pointing to the opcode just executed/fetched
+		// Notify the Debugger UI thread
+		//PostMessage(dbgCtx.hwndDbg, WM_USER_BREAKPOINT_HIT, 0, 0);
+		dbgCtx.hit_breakpoint.store(true);
+		ppu.UpdateState();
+	}
+
+	if (dbgCtx.is_paused.load(std::memory_order_relaxed)) {
+		if (dbgCtx.step_requested.load(std::memory_order_relaxed)) {
+			dbgCtx.step_requested.store(false); // Consume the request
+			return false; // allow ONE instruction
+		}
+		if (dbgCtx.continue_requested.load(std::memory_order_relaxed)) {
+			dbgCtx.continue_requested.store(false); // Consume the request
+			dbgCtx.is_paused.store(false);
+			return false; // continue running
+		}
+		return true;
+	}
+
+	return false;
+}
+
+/// <summary>
+/// As long as the game is not paused, execute one and only one CPU cycle.
+/// This may involve fetching a new instruction or executing a micro-op of the current instruction.
+/// "Always run once" keeps the CPU, APU and PPU in sync.
+/// Note the difference between instructions and cycles.
+/// This function gets called 1.79 million times per second.
+/// The state machines are designed to run on a per-cycle basis. On each cycle, a bus access MUST occur.
+/// Although some are dummy reads/writes, they must happen to keep the timing correct.
+/// </summary>
+void CPU::cpu_tick() {
+	if (!isActive) return;
+	if (inst_complete) {
+		while (ShouldPause() && sharedCtx.is_running) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		// Priority 1: reset
+		if (reset_line) {
+			current_opcode = OP_RESET;
+		}
+		else if (nmi_previous_need) {
+			// Hardware puts PC on address bus but ignores the data returned,
+			// then prepares the NMI sequence.
+			LOG_NMI(L"NMI triggered at cycle %llu\n", m_cycle_count);
+			ReadByte(m_pc);
+			current_opcode = OP_NMI;
+			nmi_previous_need = false;
+			nmi_need = false;
+		}
+		// Priority 2: IRQ
+		else if (prev_run_irq) {
+			// Dummy read
+			ReadByte(m_pc);
+			current_opcode = OP_IRQ;
+		}
+		// Priority 3: Normal Fetch
+		else {
+			// This is the actual T0 Read.
+			dbgCtx.LogInstructionFetch(m_pc);
+			dbgCtx.lastState.a = m_a;
+			dbgCtx.lastState.x = m_x;
+			dbgCtx.lastState.y = m_y;
+			dbgCtx.lastState.sp = m_sp;
+			dbgCtx.lastState.p = m_p;
+			dbgCtx.lastState.pc = m_pc; // Pointing to the opcode just executed/fetched
+			current_opcode = ReadByte(m_pc++);
+		}
+		cycle_state = 1;
+		inst_complete = false;
+	}
+	else {
+		// Execute the micro-op for the current instruction
+		opcode_table[current_opcode](*this);
+	}
+
+	//"This edge detector polls the status of the NMI line during o2 of each CPU cycle (i.e., during the 
+	//second half of each cycle) and raises an internal signal if the input goes from being high during 
+	//one cycle to being low during the next"
+	nmi_previous_need = nmi_need;
+
+	if (!nmi_previous && nmi_line) {
+		nmi_need = true;
+	}
+	nmi_previous = nmi_line;
+
+	// "it's really the status of the interrupt lines at the end of the second-to-last cycle that matters."
+	prev_run_irq = run_irq;
+	run_irq = irq_line && (GetFlag(FLAG_INTERRUPT) == 0);
+	m_cycle_count++;
+}
+
+/* We emulate the 6502 only as far as it is compatible with the NES. For example, we do not include Decimal Mode.*/
+
+// Reference https://www.nesdev.org/obelisk-6502-guide/reference.html
+int cnt = 0;
+int cnt2 = 0;
+
+void CPU::Serialize(Serializer& serializer) {
+	CPUState cpu;
+	cpu.m_a = m_a;
+	cpu.m_x = m_x;
+	cpu.m_y = m_y;
+	cpu.m_pc = m_pc;
+	cpu.m_sp = m_sp;
+	cpu.m_p = m_p;
+	cpu.nmi_line = nmi_line;
+	cpu.nmi_previous = nmi_previous;
+	cpu.nmi_previous_need = nmi_previous_need;
+	cpu.irq_line = irq_line;
+
+	cpu.m_cycle_count = m_cycle_count;
+	cpu.nmi_need = nmi_need;
+	cpu.current_opcode = current_opcode;
+
+	cpu.addr_low = addr_low;
+	cpu.addr_high = cpu.addr_high;
+	cpu.m_temp_low = m_temp_low;
+	cpu.effective_addr = effective_addr;
+	cpu.offset = offset;
+	cpu.inst_complete = inst_complete;
+	cpu.addr_complete = addr_complete;
+	cpu._operand = _operand;
+	cpu.cycle_state = cycle_state;  // Tracks the current micro-op (0, 1, 2...)
+	cpu.page_crossed = page_crossed;
+
+	cpu.prev_run_irq = prev_run_irq;
+	cpu.run_irq = run_irq;
+	serializer.Write(cpu);
+}
+
+void CPU::Deserialize(Serializer& serializer) {
+	CPUState cpu;
+	serializer.Read(cpu);
+	m_a = cpu.m_a;
+	m_x = cpu.m_x;
+	m_y = cpu.m_y;
+	m_pc = cpu.m_pc;
+	m_sp = cpu.m_sp;
+	m_p = cpu.m_p;
+	nmi_line = cpu.nmi_line;
+	nmi_previous = cpu.nmi_previous;
+	nmi_previous_need = cpu.nmi_previous_need;
+	irq_line = cpu.irq_line;
+
+	m_cycle_count = cpu.m_cycle_count;
+	nmi_need = cpu.nmi_need;
+	current_opcode = cpu.current_opcode;
+
+	addr_low = cpu.addr_low;
+	addr_high = cpu.addr_high;
+	m_temp_low = cpu.m_temp_low;
+	effective_addr = cpu.effective_addr;
+	offset = cpu.offset;
+	inst_complete = cpu.inst_complete;
+	addr_complete = cpu.addr_complete;
+	_operand = cpu._operand;
+	cycle_state = cpu.cycle_state;  // Tracks the current micro-op (0, 1, 2...)
+	page_crossed = cpu.page_crossed;
+
+	prev_run_irq = cpu.prev_run_irq;
+	run_irq = cpu.run_irq;
+}
+
+// ---------------- Debug helper ----------------
+inline void CPU::dbg(const wchar_t* fmt, ...) {
+#ifdef CPUDEBUG
+	//if (!debug) return;
+	wchar_t buf[512];
+	va_list args;
+	va_start(args, fmt);
+	_vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
+	va_end(args);
+	OutputDebugStringW(buf);
+#endif
+}
+
+inline void CPU::dbgNmi(const wchar_t* fmt, ...) {
+#ifdef NMIDEBUG
+	//if (!debug) return;
+	wchar_t buf[512];
+	va_list args;
+	va_start(args, fmt);
+	_vsnwprintf_s(buf, sizeof(buf) / sizeof(buf[0]), _TRUNCATE, fmt, args);
+	va_end(args);
+	OutputDebugStringW(buf);
+#endif
+}
+
+void CPU::PowerCycle() {
+	uint8_t resetLo = ReadByte(0xFFFC);
+	uint8_t resHi = ReadByte(0xFFFD);
+	m_pc = (static_cast<uint16_t>(resHi << 8)) | resetLo;
+	m_p = FLAG_INTERRUPT | FLAG_UNUSED;
+	m_a = 0;
+	m_x = 0;
+	m_y = 0;
+	m_sp = 0xFD;
+	m_cycle_count = 0;
+	isActive = true;
+	nmi_line = false;
+	nmi_previous = false;
+	irq_line = false;
+	nmi_previous_need = false;
+	nmi_need = false;
+	isFrozen = false;
+	current_opcode = 0x00;
+
+	addr_low = 0;
+	addr_high = 0;
+	m_temp_low = 0;
+	effective_addr = 0;
+	offset = 0;
+	inst_complete = true;
+	addr_complete = false;
+	_operand = 0;
+	cycle_state = 0;  // Tracks the current micro-op (0, 1, 2...)
+	page_crossed = 0;
+
+	prev_run_irq = false;
+	run_irq = false;
+}
+
+void CPU::Activate(bool active)
+{
+	isActive = active;
+}
+
+void CPU::Reset() {
+	reset_line = true;
+}
+
+void CPU::AddCycles(int count)
+{
+	m_cycle_count += count;
+}
+
+uint64_t CPU::GetCycleCount()
+{
+	return m_cycle_count;
+}
+
+/// <summary>
+/// Only used for testing purposes to trigger an NMI immediately.
+/// </summary>
+void CPU::SetNMIImmediate() {
+	nmi_previous_need = true;
+	nmi_previous = true;
+	nmi_need = true;
+	nmi_line = true;
+}
+
+// Called by mappers/devices to set interrupt lines
+void CPU::setNMI(bool state) {
+	nmi_line = state;
+}
+
+/// <summary>
+/// Only used for testing purposes to trigger an IRQ immediately.
+/// </summary>
+void CPU::SetIRQImmediate() {
+	run_irq = true;
+	prev_run_irq = true;
+}
+
+void CPU::setIRQ(bool state) {
+	irq_line = state;
+}
+
+void CPU::push(uint8_t value) {
+	bus->write(0x0100 + m_sp, value);
+	m_sp--;
+}
+
+uint8_t CPU::pull() {
+	m_sp++;
+	return bus->read(0x0100 + m_sp);
+}
+
+uint8_t CPU::GetSP() {
+	return m_sp;
+}
+
+void CPU::SetSP(uint8_t sp) {
+	m_sp = sp;
+}
+
+inline uint8_t CPU::ReadByte(uint16_t addr) {
+	return bus->read(addr);
+}
+
+void CPU::WriteByte(uint16_t addr, uint8_t value) {
+	bus->write(addr, value);
+}
+
+uint8_t CPU::GetStatus()
+{
+	return m_p;
+}
+
+void CPU::SetStatus(uint8_t status)
+{
+	m_p = status;
+}
+
+void CPU::ClearFlag(uint8_t flag)
+{
+	m_p &= ~flag;
+}
+
+inline void CPU::SetZero(uint8_t value)
+{
+	// Set/clear zero flag
+	if (value == 0) {
+		m_p |= FLAG_ZERO;
+	}
+	else {
+		m_p &= ~FLAG_ZERO;
+	}
+}
+
+inline void CPU::SetNegative(uint8_t value)
+{
+	// Set/clear negative flag (bit 7 of result)
+	if (value & 0x80) {
+		m_p |= FLAG_NEGATIVE;
+	}
+	else {
+		m_p &= ~FLAG_NEGATIVE;
+	}
+}
+
+inline void CPU::SetOverflow(bool condition)
+{
+	if (condition) {
+		m_p |= FLAG_OVERFLOW;
+	}
+	else {
+		m_p &= ~FLAG_OVERFLOW;
+	}
+}
+
+inline void CPU::SetCarry(bool condition)
+{
+	if (condition) {
+		m_p |= FLAG_CARRY;
+	}
+	else {
+		m_p &= ~FLAG_CARRY;
+	}
+}
+
+inline void CPU::SetDecimal(bool condition)
+{
+	if (condition) {
+		m_p |= FLAG_DECIMAL;
+	}
+	else {
+		m_p &= ~FLAG_DECIMAL;
+	}
+}
+
+inline void CPU::SetInterrupt(bool condition)
+{
+	if (condition) {
+		m_p |= FLAG_INTERRUPT;
+	}
+	else {
+		m_p &= ~FLAG_INTERRUPT;
+	}
+}
+
+inline void CPU::SetBreak(bool condition)
+{
+	if (condition) {
+		m_p |= FLAG_BREAK;
+	}
+	else {
+		m_p &= ~FLAG_BREAK;
+	}
+}
+
+// Primarily used for testing purposes.
+uint8_t CPU::GetA()
+{
+	return m_a;
+}
+
+void CPU::SetA(uint8_t a)
+{
+	m_a = a;
+}
+
+uint8_t CPU::GetX()
+{
+	return m_x;
+}
+
+void CPU::SetX(uint8_t x)
+{
+	m_x = x;
+}
+
+uint8_t CPU::GetY()
+{
+	return m_y;
+}
+
+void CPU::SetY(uint8_t y)
+{
+	m_y = y;
+}
+
+bool CPU::GetFlag(uint8_t flag)
+{
+	return (m_p & flag) == flag;
+}
+
+void CPU::SetFlag(uint8_t flag)
+{
+	m_p |= flag;
+}
+
+uint16_t CPU::GetPC() {
+	return m_pc;
+}
+
+void CPU::SetPC(uint16_t address)
+{
+	m_pc = address;
+}
+
+void CPU::ConsumeCycle() {
+	m_cycle_count++;
+}
+
+void CPU::init_cpu() {
+	reset_line = false;
+	// Halt on invalid instructions.
+	for (int i = 0; i < 0x100; i++) {
+		opcode_table[i] = &run_standalone_instruction<Op_HLT>;
+	}
+
+	opcode_table[0x06] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_ASL>>;
+	opcode_table[0x0A] = &run_accumulator_instruction<Op_ASL>;
+	opcode_table[0x0E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_ASL>>;
+	opcode_table[0x16] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_ASL>>;
+	opcode_table[0x1E] = &run_instruction<Mode_AbsoluteX<Op_ASL::is_rmw>, Op_RMW<Logic_ASL>>;
+
+	opcode_table[0x21] = &run_instruction<Mode_IndirectX, Op_AND>;
+	opcode_table[0x25] = &run_instruction<Mode_ZeroPage, Op_AND>;
+	opcode_table[0x29] = &run_instruction<Mode_Immediate, Op_AND>;
+	opcode_table[0x2D] = &run_instruction<Mode_Absolute, Op_AND>;
+	opcode_table[0x31] = &run_instruction<Mode_IndirectY<Op_AND::is_rmw>, Op_AND>;
+	opcode_table[0x35] = &run_instruction<Mode_ZeroPageX, Op_AND>;
+	opcode_table[0x39] = &run_instruction<Mode_AbsoluteY<Op_AND::is_rmw>, Op_AND>;
+	opcode_table[0x3D] = &run_instruction<Mode_AbsoluteX<Op_AND::is_rmw>, Op_AND>;
+
+	opcode_table[0x61] = &run_instruction<Mode_IndirectX, Op_ADC>;
+	opcode_table[0x65] = &run_instruction<Mode_ZeroPage, Op_ADC>;
+	opcode_table[0x69] = &run_instruction<Mode_Immediate, Op_ADC>;
+	opcode_table[0x6D] = &run_instruction<Mode_Absolute, Op_ADC>;
+	opcode_table[0x71] = &run_instruction<Mode_IndirectY<Op_ADC::is_rmw>, Op_ADC>;
+	opcode_table[0x75] = &run_instruction<Mode_ZeroPageX, Op_ADC>;
+	opcode_table[0x79] = &run_instruction<Mode_AbsoluteY<Op_ADC::is_rmw>, Op_ADC>;
+	opcode_table[0x7D] = &run_instruction<Mode_AbsoluteX<Op_ADC::is_rmw>, Op_ADC>;
+
+	opcode_table[0x90] = &run_standalone_instruction<Op_BCC>;
+	opcode_table[0xB0] = &run_standalone_instruction<Op_BCS>;
+	opcode_table[0xF0] = &run_standalone_instruction<Op_BEQ>;
+	opcode_table[0x30] = &run_standalone_instruction<Op_BMI>;
+	opcode_table[0xD0] = &run_standalone_instruction<Op_BNE>;
+	opcode_table[0x10] = &run_standalone_instruction<Op_BPL>;
+	opcode_table[0x50] = &run_standalone_instruction<Op_BVC>;
+	opcode_table[0x70] = &run_standalone_instruction<Op_BVS>;
+
+	opcode_table[0x00] = &run_standalone_instruction<Op_BRK>;
+
+	opcode_table[0x24] = &run_instruction<Mode_ZeroPage, Op_BIT>;
+	opcode_table[0x2C] = &run_instruction<Mode_Absolute, Op_BIT>;
+
+	opcode_table[0x18] = &run_instruction<Mode_Implied, Op_CLC>;
+	opcode_table[0xD8] = &run_instruction<Mode_Implied, Op_CLD>;
+	opcode_table[0x58] = &run_instruction<Mode_Implied, Op_CLI>;
+	opcode_table[0xB8] = &run_instruction<Mode_Implied, Op_CLV>;
+
+	opcode_table[0xC9] = &run_instruction<Mode_Immediate, Op_CMP>;
+	opcode_table[0xC5] = &run_instruction<Mode_ZeroPage, Op_CMP>;
+	opcode_table[0xD5] = &run_instruction<Mode_ZeroPageX, Op_CMP>;
+	opcode_table[0xCD] = &run_instruction<Mode_Absolute, Op_CMP>;
+	opcode_table[0xDD] = &run_instruction<Mode_AbsoluteX<Op_CMP::is_rmw>, Op_CMP>;
+	opcode_table[0xD9] = &run_instruction<Mode_AbsoluteY<Op_CMP::is_rmw>, Op_CMP>;
+	opcode_table[0xC1] = &run_instruction<Mode_IndirectX, Op_CMP>;
+	opcode_table[0xD1] = &run_instruction<Mode_IndirectY<Op_CMP::is_rmw>, Op_CMP>;
+
+	opcode_table[0xE0] = &run_instruction<Mode_Immediate, Op_CPX>;
+	opcode_table[0xE4] = &run_instruction<Mode_ZeroPage, Op_CPX>;
+	opcode_table[0xEC] = &run_instruction<Mode_Absolute, Op_CPX>;
+
+	opcode_table[0xC0] = &run_instruction<Mode_Immediate, Op_CPY>;
+	opcode_table[0xC4] = &run_instruction<Mode_ZeroPage, Op_CPY>;
+	opcode_table[0xCC] = &run_instruction<Mode_Absolute, Op_CPY>;
+
+	opcode_table[0xC6] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_DEC>>;
+	opcode_table[0xD6] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_DEC>>;
+	opcode_table[0xCE] = &run_instruction<Mode_Absolute, Op_RMW<Logic_DEC>>;
+	opcode_table[0xDE] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_DEC>>;
+
+	opcode_table[0xCA] = &run_instruction<Mode_Implied, Op_DEX>;
+	opcode_table[0x88] = &run_instruction<Mode_Implied, Op_DEY>;
+
+	opcode_table[0x49] = &run_instruction<Mode_Immediate, Op_EOR>;
+	opcode_table[0x45] = &run_instruction<Mode_ZeroPage, Op_EOR>;
+	opcode_table[0x55] = &run_instruction<Mode_ZeroPageX, Op_EOR>;
+	opcode_table[0x4D] = &run_instruction<Mode_Absolute, Op_EOR>;
+	opcode_table[0x5D] = &run_instruction<Mode_AbsoluteX<Op_EOR::is_write>, Op_EOR>;
+	opcode_table[0x59] = &run_instruction<Mode_AbsoluteY<Op_EOR::is_write>, Op_EOR>;
+	opcode_table[0x41] = &run_instruction<Mode_IndirectX, Op_EOR>;
+	opcode_table[0x51] = &run_instruction<Mode_IndirectY<Op_EOR::is_write>, Op_EOR>;
+
+	opcode_table[0xE6] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_INC>>;
+	opcode_table[0xF6] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_INC>>;
+	opcode_table[0xEE] = &run_instruction<Mode_Absolute, Op_RMW<Logic_INC>>;
+	// $FE: INC Absolute, X
+	// Uses "is_rmw=true" -> Forces 7 cycles (Mode T1-T3, Op T4-T6)
+	opcode_table[0xFE] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_INC>>;
+	opcode_table[0xE8] = &run_instruction<Mode_Implied, Op_INX>;
+	opcode_table[0xC8] = &run_instruction<Mode_Implied, Op_INY>;
+
+	opcode_table[0x4C] = &run_standalone_instruction<Op_JMP_Absolute>;
+	opcode_table[0x6C] = &run_standalone_instruction<Op_JMP_Indirect>;
+
+	opcode_table[0x20] = &run_standalone_instruction<Op_JSR>;
+
+	opcode_table[0xA9] = &run_instruction<Mode_Immediate, Op_LDA>;
+	opcode_table[0xA5] = &run_instruction<Mode_ZeroPage, Op_LDA>;
+	opcode_table[0xB5] = &run_instruction<Mode_ZeroPageX, Op_LDA>;
+	opcode_table[0xAD] = &run_instruction<Mode_Absolute, Op_LDA>;
+	opcode_table[0xBD] = &run_instruction<Mode_AbsoluteX<Op_LDA::is_rmw>, Op_LDA>;
+	opcode_table[0xB9] = &run_instruction<Mode_AbsoluteY<Op_LDA::is_rmw>, Op_LDA>;
+	opcode_table[0xA1] = &run_instruction<Mode_IndirectX, Op_LDA>;
+	opcode_table[0xB1] = &run_instruction<Mode_IndirectY<Op_LDA::is_rmw>, Op_LDA>;
+
+	opcode_table[0xA2] = &run_instruction<Mode_Immediate, Op_LDX>;
+	opcode_table[0xA6] = &run_instruction<Mode_ZeroPage, Op_LDX>;
+	opcode_table[0xB6] = &run_instruction<Mode_ZeroPageY, Op_LDX>;
+	opcode_table[0xAE] = &run_instruction<Mode_Absolute, Op_LDX>;
+	opcode_table[0xBE] = &run_instruction<Mode_AbsoluteY<Op_LDX::is_rmw>, Op_LDX>;
+
+	opcode_table[0xA0] = &run_instruction<Mode_Immediate, Op_LDY>;
+	opcode_table[0xA4] = &run_instruction<Mode_ZeroPage, Op_LDY>;
+	opcode_table[0xB4] = &run_instruction<Mode_ZeroPageX, Op_LDY>;
+	opcode_table[0xAC] = &run_instruction<Mode_Absolute, Op_LDY>;
+	opcode_table[0xBC] = &run_instruction<Mode_AbsoluteX<Op_LDY::is_rmw>, Op_LDY>;
+
+	opcode_table[0x4A] = &run_instruction<Mode_Implied, Op_LSR_Accumulator>;
+	opcode_table[0x46] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_LSR>>;
+	opcode_table[0x56] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_LSR>>;
+	opcode_table[0x4E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_LSR>>;
+	opcode_table[0x5E] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_LSR>>;
+
+	opcode_table[0xEA] = &run_instruction<Mode_Implied, Op_NOP>;
+
+	opcode_table[0x09] = &run_instruction<Mode_Immediate, Op_ORA>;
+	opcode_table[0x05] = &run_instruction<Mode_ZeroPage, Op_ORA>;
+	opcode_table[0x15] = &run_instruction<Mode_ZeroPageX, Op_ORA>;
+	opcode_table[0x0D] = &run_instruction<Mode_Absolute, Op_ORA>;
+	opcode_table[0x1D] = &run_instruction<Mode_AbsoluteX<Op_ORA::is_rmw>, Op_ORA>;
+	opcode_table[0x19] = &run_instruction<Mode_AbsoluteY<Op_ORA::is_rmw>, Op_ORA>;
+	opcode_table[0x01] = &run_instruction<Mode_IndirectX, Op_ORA>;
+	opcode_table[0x11] = &run_instruction<Mode_IndirectY<Op_ORA::is_rmw>, Op_ORA>;
+
+	opcode_table[0x48] = &run_standalone_instruction<Op_PHA>;
+	opcode_table[0x08] = &run_standalone_instruction<Op_PHP>;
+	opcode_table[0x68] = &run_standalone_instruction<Op_PLA>;
+	opcode_table[0x28] = &run_standalone_instruction<Op_PLP>;
+
+	opcode_table[0x2A] = &run_instruction<Mode_Implied, Op_ROL_Accumulator>;
+	opcode_table[0x26] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_ROL>>;
+	opcode_table[0x36] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_ROL>>;
+	opcode_table[0x2E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_ROL>>;
+	opcode_table[0x3E] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_ROL>>;
+
+	opcode_table[0x6A] = &run_instruction<Mode_Implied, Op_ROR_Accumulator>;
+	opcode_table[0x66] = &run_instruction<Mode_ZeroPage, Op_RMW<Logic_ROR>>;
+	opcode_table[0x76] = &run_instruction<Mode_ZeroPageX, Op_RMW<Logic_ROR>>;
+	opcode_table[0x6E] = &run_instruction<Mode_Absolute, Op_RMW<Logic_ROR>>;
+	opcode_table[0x7E] = &run_instruction<Mode_AbsoluteX<true>, Op_RMW<Logic_ROR>>;
+
+
+	opcode_table[0x40] = &run_standalone_instruction<Op_RTI>;
+	opcode_table[0x60] = &run_standalone_instruction<Op_RTS>;
+
+	opcode_table[0xE1] = &run_instruction<Mode_IndirectX, Op_SBC>;
+	opcode_table[0xE5] = &run_instruction<Mode_ZeroPage, Op_SBC>;
+	opcode_table[0xE9] = &run_instruction<Mode_Immediate, Op_SBC>;
+	opcode_table[0xED] = &run_instruction<Mode_Absolute, Op_SBC>;
+	opcode_table[0xF1] = &run_instruction<Mode_IndirectY<Op_SBC::is_rmw>, Op_SBC>;
+	opcode_table[0xF5] = &run_instruction<Mode_ZeroPageX, Op_SBC>;
+	opcode_table[0xF9] = &run_instruction<Mode_AbsoluteY<Op_SBC::is_rmw>, Op_SBC>;
+	opcode_table[0xFD] = &run_instruction<Mode_AbsoluteX<Op_SBC::is_rmw>, Op_SBC>;
+
+	opcode_table[0x38] = &run_instruction<Mode_Implied, Op_SEC>;
+	opcode_table[0xF8] = &run_instruction<Mode_Implied, Op_SED>;
+	opcode_table[0x78] = &run_instruction<Mode_Implied, Op_SEI>;
+
+	opcode_table[0x81] = &run_instruction<Mode_IndirectX, Op_STA>;
+	opcode_table[0x85] = &run_instruction<Mode_ZeroPage, Op_STA>;
+	opcode_table[0x8D] = &run_instruction<Mode_Absolute, Op_STA>;
+	opcode_table[0x91] = &run_instruction<Mode_IndirectY<Op_STA::is_rmw>, Op_STA>;
+	opcode_table[0x95] = &run_instruction<Mode_ZeroPageX, Op_STA>;
+	opcode_table[0x99] = &run_instruction<Mode_AbsoluteY<Op_STA::is_rmw>, Op_STA>;
+	opcode_table[0x9D] = &run_instruction<Mode_AbsoluteX<Op_STA::is_rmw>, Op_STA>;
+
+	opcode_table[0x86] = &run_instruction<Mode_ZeroPage, Op_STX>;
+	opcode_table[0x96] = &run_instruction<Mode_ZeroPageY, Op_STX>;
+	opcode_table[0x8E] = &run_instruction<Mode_Absolute, Op_STX>;
+
+	opcode_table[0x84] = &run_instruction<Mode_ZeroPage, Op_STY>;
+	opcode_table[0x94] = &run_instruction<Mode_ZeroPageX, Op_STY>;
+	opcode_table[0x8C] = &run_instruction<Mode_Absolute, Op_STY>;
+
+	opcode_table[0xAA] = &run_instruction<Mode_Implied, Op_TAX>;
+	opcode_table[0xA8] = &run_instruction<Mode_Implied, Op_TAY>;
+	opcode_table[0xBA] = &run_instruction<Mode_Implied, Op_TSX>;
+	opcode_table[0x8A] = &run_instruction<Mode_Implied, Op_TXA>;
+	opcode_table[0x9A] = &run_instruction<Mode_Implied, Op_TXS>;
+	opcode_table[0x98] = &run_instruction<Mode_Implied, Op_TYA>;
+
+	// Phantom op codes
+	opcode_table[OP_NMI] = &run_standalone_instruction<Op_HardwareInterrupt_NMI>;
+	opcode_table[OP_IRQ] = &run_standalone_instruction<Op_HardwareInterrupt_IRQ>;
+	opcode_table[OP_RESET] = &run_standalone_instruction<Op_HardwareReset>;
+
+	// Unnoficial op codes
+	opcode_table[0x04] = &run_instruction<Mode_ZeroPage, Op_NOP>;
+}
+
+void CPU::buildMap() {
+	instructionMap[0x69] = "ADC_IMMEDIATE";
+	instructionMap[0x65] = "ADC_ZEROPAGE";
+	instructionMap[0x75] = "ADC_ZEROPAGE_X";
+	instructionMap[0x6D] = "ADC_ABSOLUTE";
+	instructionMap[0x7D] = "ADC_ABSOLUTE_X";
+	instructionMap[0x79] = "ADC_ABSOLUTE_Y";
+	instructionMap[0x61] = "ADC_INDEXEDINDIRECT";
+	instructionMap[0x71] = "ADC_INDIRECTINDEXED";
+	instructionMap[0x29] = "AND_IMMEDIATE";
+	instructionMap[0x25] = "AND_ZEROPAGE";
+	instructionMap[0x35] = "AND_ZEROPAGE_X";
+	instructionMap[0x2D] = "AND_ABSOLUTE";
+	instructionMap[0x3D] = "AND_ABSOLUTE_X";
+	instructionMap[0x39] = "AND_ABSOLUTE_Y";
+	instructionMap[0x21] = "AND_INDEXEDINDIRECT";
+	instructionMap[0x31] = "AND_INDIRECTINDEXED";
+	instructionMap[0x0A] = "ASL_ACCUMULATOR";
+	instructionMap[0x06] = "ASL_ZEROPAGE";
+	instructionMap[0x16] = "ASL_ZEROPAGE_X";
+	instructionMap[0x0E] = "ASL_ABSOLUTE";
+	instructionMap[0x1E] = "ASL_ABSOLUTE_X";
+	instructionMap[0x90] = "BCC_RELATIVE";
+	instructionMap[0xB0] = "BCS_RELATIVE";
+	instructionMap[0xF0] = "BEQ_RELATIVE";
+	instructionMap[0x24] = "BIT_ZEROPAGE";
+	instructionMap[0x2C] = "BIT_ABSOLUTE";
+	instructionMap[0x30] = "BMI_RELATIVE";
+	instructionMap[0xD0] = "BNE_RELATIVE";
+	instructionMap[0x10] = "BPL_RELATIVE";
+	instructionMap[0x00] = "BRK_IMPLIED";
+	instructionMap[0x50] = "BVC_RELATIVE";
+	instructionMap[0x70] = "BVS_RELATIVE";
+	instructionMap[0x18] = "CLC_IMPLIED";
+	instructionMap[0xD8] = "CLD_IMPLIED";
+	instructionMap[0x58] = "CLI_IMPLIED";
+	instructionMap[0xB8] = "CLV_IMPLIED";
+	instructionMap[0xC9] = "CMP_IMMEDIATE";
+	instructionMap[0xC5] = "CMP_ZEROPAGE";
+	instructionMap[0xD5] = "CMP_ZEROPAGE_X";
+	instructionMap[0xCD] = "CMP_ABSOLUTE";
+	instructionMap[0xDD] = "CMP_ABSOLUTE_X";
+	instructionMap[0xD9] = "CMP_ABSOLUTE_Y";
+	instructionMap[0x69] = "ADC_IMMEDIATE";
+	instructionMap[0xC1] = "CMP_INDEXEDINDIRECT";
+	instructionMap[0xD1] = "CMP_INDIRECTINDEXED";
+	instructionMap[0xE0] = "CPX_IMMEDIATE";
+	instructionMap[0xE4] = "CPX_ZEROPAGE";
+	instructionMap[0xEC] = "CPX_ABSOLUTE";
+	instructionMap[0xC0] = "CPY_IMMEDIATE";
+	instructionMap[0xC4] = "CPY_ZEROPAGE";
+	instructionMap[0xCC] = "CPY_ABSOLUTE";
+	instructionMap[0xC6] = "DEC_ZEROPAGE";
+	instructionMap[0xD6] = "DEC_ZEROPAGE_X";
+	instructionMap[0xCE] = "DEC_ABSOLUTE";
+	instructionMap[0xDE] = "DEC_ABSOLUTE_X";
+	instructionMap[0xCA] = "DEX_IMPLIED";
+	instructionMap[0x88] = "DEY_IMPLIED";
+	instructionMap[0x49] = "EOR_IMMEDIATE";
+	instructionMap[0x45] = "EOR_ZEROPAGE";
+	instructionMap[0x55] = "EOR_ZEROPAGE_X";
+	instructionMap[0x4D] = "EOR_ABSOLUTE";
+	instructionMap[0x5D] = "EOR_ABSOLUTE_X";
+	instructionMap[0x59] = "EOR_ABSOLUTE_Y";
+	instructionMap[0x41] = "EOR_INDEXEDINDIRECT";
+	instructionMap[0x51] = "EOR_INDIRECTINDEXED";
+	instructionMap[0xE6] = "INC_ZEROPAGE";
+	instructionMap[0xF6] = "INC_ZEROPAGE_X";
+	instructionMap[0xEE] = "INC_ABSOLUTE";
+	instructionMap[0xFE] = "INC_ABSOLUTE_X";
+	instructionMap[0xE8] = "INX_IMPLIED";
+	instructionMap[0xC8] = "INY_IMPLIED";
+	instructionMap[0x4C] = "JMP_ABSOLUTE";
+	instructionMap[0x6C] = "JMP_INDIRECT";
+	instructionMap[0x20] = "JSR_ABSOLUTE";
+	instructionMap[0xA9] = "LDA_IMMEDIATE";
+	instructionMap[0xA5] = "LDA_ZEROPAGE";
+	instructionMap[0xB5] = "LDA_ZEROPAGE_X";
+	instructionMap[0xAD] = "LDA_ABSOLUTE";
+	instructionMap[0xBD] = "LDA_ABSOLUTE_X";
+	instructionMap[0xB9] = "LDA_ABSOLUTE_Y";
+	instructionMap[0xA1] = "LDA_INDEXEDINDIRECT";
+	instructionMap[0xB1] = "LDA_INDIRECTINDEXED";
+	instructionMap[0xA2] = "LDX_IMMEDIATE";
+	instructionMap[0xA6] = "LDX_ZEROPAGE";
+	instructionMap[0xB6] = "LDX_ZEROPAGE_Y";
+	instructionMap[0xAE] = "LDX_ABSOLUTE";
+	instructionMap[0xBE] = "LDX_ABSOLUTE_Y";
+	instructionMap[0xA0] = "LDY_IMMEDIATE";
+	instructionMap[0xA4] = "LDY_ZEROPAGE";
+	instructionMap[0xB4] = "LDY_ZEROPAGE_X";
+	instructionMap[0xAC] = "LDY_ABSOLUTE";
+	instructionMap[0xBC] = "LDY_ABSOLUTE_X";
+	instructionMap[0x4A] = "LSR_ACCUMULATOR";
+	instructionMap[0x46] = "LSR_ZEROPAGE";
+	instructionMap[0x56] = "LSR_ZEROPAGE_X";
+	instructionMap[0x4E] = "LSR_ABSOLUTE";
+	instructionMap[0x5E] = "LSR_ABSOLUTE_X";
+	instructionMap[0xEA] = "NOP_IMPLIED";
+	instructionMap[0x09] = "ORA_IMMEDIATE";
+	instructionMap[0x05] = "ORA_ZEROPAGE";
+	instructionMap[0x15] = "ORA_ZEROPAGE_X";
+	instructionMap[0x0D] = "ORA_ABSOLUTE";
+	instructionMap[0x1D] = "ORA_ABSOLUTE_X";
+	instructionMap[0x19] = "ORA_ABSOLUTE_Y";
+	instructionMap[0x01] = "ORA_INDEXEDINDIRECT";
+	instructionMap[0x11] = "ORA_INDIRECTINDEXED";
+	instructionMap[0x48] = "PHA_IMPLIED";
+	instructionMap[0x08] = "PHP_IMPLIED";
+	instructionMap[0x68] = "PLA_IMPLIED";
+	instructionMap[0x28] = "PLP_IMPLIED";
+	instructionMap[0x2A] = "ROL_ACCUMULATOR";
+	instructionMap[0x26] = "ROL_ZEROPAGE";
+	instructionMap[0x36] = "ROL_ZEROPAGE_X";
+	instructionMap[0x2E] = "ROL_ABSOLUTE";
+	instructionMap[0x3E] = "ROL_ABSOLUTE_X";
+	instructionMap[0x6A] = "ROR_ACCUMULATOR";
+	instructionMap[0x66] = "ROR_ZEROPAGE";
+	instructionMap[0x76] = "ROR_ZEROPAGE_X";
+	instructionMap[0x6E] = "ROR_ABSOLUTE";
+	instructionMap[0x7E] = "ROR_ABSOLUTE_X";
+	instructionMap[0x40] = "RTI_IMPLIED";
+	instructionMap[0x60] = "RTS_IMPLIED";
+	instructionMap[0xE9] = "SBC_IMMEDIATE";
+	instructionMap[0xE5] = "SBC_ZEROPAGE";
+	instructionMap[0xF5] = "SBC_ZEROPAGE_X";
+	instructionMap[0xED] = "SBC_ABSOLUTE";
+	instructionMap[0xFD] = "SBC_ABSOLUTE_X";
+	instructionMap[0xF9] = "SBC_ABSOLUTE_Y";
+	instructionMap[0xE1] = "SBC_INDEXEDINDIRECT";
+	instructionMap[0xF1] = "SBC_INDIRECTINDEXED";
+	instructionMap[0x38] = "SEC_IMPLIED";
+	instructionMap[0xF8] = "SED_IMPLIED";
+	instructionMap[0x78] = "SEI_IMPLIED";
+	instructionMap[0x85] = "STA_ZEROPAGE";
+	instructionMap[0x95] = "STA_ZEROPAGE_X";
+	instructionMap[0x8D] = "STA_ABSOLUTE";
+	instructionMap[0x9D] = "STA_ABSOLUTE_X";
+	instructionMap[0x99] = "STA_ABSOLUTE_Y";
+	instructionMap[0x81] = "STA_INDEXEDINDIRECT";
+	instructionMap[0x91] = "STA_INDIRECTINDEXED";
+	instructionMap[0x86] = "STX_ZEROPAGE";
+	instructionMap[0x96] = "STX_ZEROPAGE_Y";
+	instructionMap[0x8E] = "STX_ABSOLUTE";
+	instructionMap[0x84] = "STY_ZEROPAGE";
+	instructionMap[0x94] = "STY_ZEROPAGE_X";
+	instructionMap[0x8C] = "STY_ABSOLUTE";
+	instructionMap[0xAA] = "TAX_IMPLIED";
+	instructionMap[0xA8] = "TAY_IMPLIED";
+	instructionMap[0xBA] = "TSX_IMPLIED";
+	instructionMap[0x8A] = "TXA_IMPLIED";
+	instructionMap[0x9A] = "TXS_IMPLIED";
+	instructionMap[0x98] = "TYA_IMPLIED";
+}
