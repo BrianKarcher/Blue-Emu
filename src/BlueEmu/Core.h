@@ -9,7 +9,7 @@
 #include "NesPpu.h"
 #include "NesCpu.h"
 #include "NesApu.h"
-#include "Input.h"
+#include "NesInput.h"
 #include "PPUViewer.h"
 #include "EmulatorCore.h"
 #include "SharedContext.h"

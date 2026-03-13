@@ -152,7 +152,7 @@
     <ClCompile Include="EmulatorCore.cpp" />
     <ClCompile Include="HexViewer.cpp" />
     <ClCompile Include="INESLoader.cpp" />
-    <ClCompile Include="Input.cpp" />
+    <ClCompile Include="NesInput.cpp" />
     <ClCompile Include="InputMappers.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mapper.cpp" />
@@ -195,7 +195,7 @@
     <ClInclude Include="EmulatorCore.h" />
     <ClInclude Include="HexViewer.h" />
     <ClInclude Include="INESLoader.h" />
-    <ClInclude Include="Input.h" />
+    <ClInclude Include="NesInput.h" />
     <ClInclude Include="InputMappers.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="Mapper.h" />

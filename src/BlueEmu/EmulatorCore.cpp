@@ -7,7 +7,7 @@
 #include "NesPpu.h"
 #include "NesApu.h"
 #include "NesBus.h"
-#include "Input.h"
+#include "NesInput.h"
 #include <vector>
 #include "Serializer.h"
 #include <fstream>

@@ -1,13 +1,13 @@
 #pragma once
 #include "NesMemoryMapper.h"
 
-class Input;
+class NesInput;
 class NesBus;
 
 class ReadController1Mapper : public NesMemoryMapper
 {
 public:
-	ReadController1Mapper(Input& input);
+	ReadController1Mapper(NesInput& input);
 	~ReadController1Mapper() = default;
 
 	inline uint8_t read(uint16_t address);
@@ -17,13 +17,13 @@ public:
 	inline void write(uint16_t address, uint8_t value);
 	void register_memory(NesBus& bus);
 private:
-	Input& m_input;
+	NesInput& m_input;
 };
 
 class ReadController2Mapper : public NesMemoryMapper
 {
 public:
-	ReadController2Mapper(Input& input);
+	ReadController2Mapper(NesInput& input);
 	~ReadController2Mapper() = default;
 
 	inline uint8_t read(uint16_t address);
@@ -33,5 +33,5 @@ public:
 	inline void write(uint16_t address, uint8_t value);
 	void register_memory(NesBus& bus);
 private:
-	Input& m_input;
+	NesInput& m_input;
 };

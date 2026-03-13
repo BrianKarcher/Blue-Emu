@@ -1,13 +1,13 @@
-#include "Input.h"
+#include "NesInput.h"
 
-Input::Input(): controller1(0), controller2(0), controller1_stream(0), controller2_stream(0) {
+NesInput::NesInput(): controller1(0), controller2(0), controller1_stream(0), controller2_stream(0) {
 
 }
 
 // -------------------------------
 // Open first available controller
 // -------------------------------
-void Input::OpenFirstController() {
+void NesInput::OpenFirstController() {
 	controllers.clear();
     for (int i = 0; i < SDL_NumJoysticks(); i++) {
         if (SDL_IsGameController(i)) {
@@ -20,7 +20,7 @@ void Input::OpenFirstController() {
 // -------------------------------
 // Close controller
 // -------------------------------
-void Input::CloseController()
+void NesInput::CloseController()
 {
 	for (int i = 0; i < controllers.size(); i++) {
 		if (controllers[i]) {
@@ -32,7 +32,7 @@ void Input::CloseController()
 	controllers.clear();
 }
 
-void Input::PollControllerState()
+void NesInput::PollControllerState()
 {
     controller1 = 0;
 
@@ -106,28 +106,28 @@ void Input::PollControllerState()
 	}
 }
 
-void Input::ButtonDown(int key) {
+void NesInput::ButtonDown(int key) {
 	controller1 |= key;
 	// Add cases for controller2 if needed
 }
 
-void Input::ButtonUp(int key) {
+void NesInput::ButtonUp(int key) {
 	controller1 &= ~key;
 	// Add cases for controller2 if needed
 }
 
-void Input::Poll() {
+void NesInput::Poll() {
 	controller1_stream = controller1;
 	controller2_stream = controller2;
 }
 
-uint8_t Input::ReadController1() {
+uint8_t NesInput::ReadController1() {
 	uint8_t ret = controller1_stream & 1;
 	controller1_stream >>= 1;
 	return ret;
 }
 
-uint8_t Input::ReadController2() {
+uint8_t NesInput::ReadController2() {
 	uint8_t ret = controller2_stream & 1;
 	controller2_stream >>= 1;
 	return ret;

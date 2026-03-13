@@ -12,10 +12,10 @@
 #define BUTTON_LEFT 0x40
 #define BUTTON_RIGHT 0x80
 
-class Input
+class NesInput
 {
 public:
-	Input();
+	NesInput();
 	void ButtonDown(int key);
 	void ButtonUp(int key);
 	void Poll();

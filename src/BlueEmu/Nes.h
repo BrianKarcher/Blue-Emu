@@ -14,7 +14,7 @@ class NesPpu;
 class NesCartridge;
 class NesCpu;
 class NesApu;
-class Input;
+class NesInput;
 class SharedContext;
 class NesAudioMapper;
 class ReadController1Mapper;
@@ -31,7 +31,7 @@ public:
 	NesCartridge& cart() { return *cart_; }
 	NesCpu& cpu() { return *cpu_; }
 	NesApu& apu() { return *apu_; }
-	Input& input() { return *input_; }
+	NesInput& input() { return *input_; }
 	SharedContext& context() { return *context_; }
 	NesAudioMapper& audioMapper() {
 		return *audioMapper_;
@@ -59,7 +59,7 @@ public:
 	NesCartridge* cart_;
 	NesCpu* cpu_;
 	NesApu* apu_;
-	Input* input_;
+	NesInput* input_;
 	SharedContext* context_;
 	NesAudioMapper* audioMapper_;
 	ReadController1Mapper* readController1Mapper_;

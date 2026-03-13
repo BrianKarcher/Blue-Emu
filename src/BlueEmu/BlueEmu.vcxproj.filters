@@ -101,7 +101,7 @@
     <ClCompile Include="HexViewer.cpp">
       <Filter>UI</Filter>
     </ClCompile>
-    <ClCompile Include="Input.cpp">
+    <ClCompile Include="NesInput.cpp">
       <Filter>Core\NES</Filter>
     </ClCompile>
     <ClCompile Include="DebuggerContext.cpp">
@@ -248,7 +248,7 @@
     <ClInclude Include="HexViewer.h">
       <Filter>UI</Filter>
     </ClInclude>
-    <ClInclude Include="Input.h">
+    <ClInclude Include="NesInput.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
     <ClInclude Include="CommandQueue.h">

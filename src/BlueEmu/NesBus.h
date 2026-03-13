@@ -9,19 +9,19 @@
 
 class NesPpu;
 class NesApu;
-class Input;
+class NesInput;
 class OpenNesBusMapper;
 class Serializer;
 
 class NesBus
 {
 public:
-	NesBus(NesCpu& cpu, NesPpu& ppu, NesApu& apu, Input& input, NesCartridge& cart, OpenNesBusMapper& openNesBus);
+	NesBus(NesCpu& cpu, NesPpu& ppu, NesApu& apu, NesInput& input, NesCartridge& cart, OpenNesBusMapper& openNesBus);
 	~NesBus();
 
 	RAMMapper ramMapper;
 	// Some addresses are mapped to different devices, so we use a memory map
-	// An example is 0x4017, which is mapped to the NesApu (write), but also to an Input device (read)
+	// An example is 0x4017, which is mapped to the NesApu (write), but also to an NesInput device (read)
 	NesMemoryMapper** readMemoryMap; // 64KB memory map
 	NesMemoryMapper** writeMemoryMap; // 64KB memory map
 
@@ -50,7 +50,7 @@ public:
 	NesPpu& ppu;
 	NesApu& apu;
 	NesCartridge& cart;
-	Input& input;
+	NesInput& input;
 	OpenNesBusMapper& openNesBus;
 
 private:

@@ -4,7 +4,7 @@
 #include "NesCartridge.h"
 #include "NesCpu.h"
 #include "NesApu.h"
-#include "Input.h"
+#include "NesInput.h"
 #include "SharedContext.h"
 #include <vector>
 #include "NesAudioMapper.h"
@@ -18,7 +18,7 @@
 Nes::Nes(SharedContext& ctx) {
     context_ = &ctx;
 	apu_ = new NesApu();
-    input_ = new Input();
+    input_ = new NesInput();
     openNesBus_ = new OpenNesBusMapper();
     _debuggerContext = ctx.debugger_context;
     ppu_ = new NesPpu(ctx, *this);

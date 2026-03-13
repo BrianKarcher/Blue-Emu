@@ -1,8 +1,8 @@
 #include "InputMappers.h"
-#include "Input.h"
+#include "NesInput.h"
 #include "NesBus.h"
 
-ReadController1Mapper::ReadController1Mapper(Input& input) : m_input(input) { }
+ReadController1Mapper::ReadController1Mapper(NesInput& input) : m_input(input) { }
 
 inline uint8_t ReadController1Mapper::read(uint16_t address) {
 	return m_input.ReadController1();
@@ -21,7 +21,7 @@ void ReadController1Mapper::register_memory(NesBus& bus) {
 	bus.WriteRegisterAdd(0x4016, 0x4016, this);
 }
 
-ReadController2Mapper::ReadController2Mapper(Input& input) : m_input(input) {}
+ReadController2Mapper::ReadController2Mapper(NesInput& input) : m_input(input) {}
 
 inline uint8_t ReadController2Mapper::read(uint16_t address) {
 	return m_input.ReadController2();

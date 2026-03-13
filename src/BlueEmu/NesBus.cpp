@@ -1,7 +1,7 @@
 #include "NesBus.h"
 #include "NesPpu.h"
 #include "NesCartridge.h"
-#include "Input.h"
+#include "NesInput.h"
 #include "NesCpu.h"
 #include "NesApu.h"
 #include "NesMemoryMapper.h"
@@ -9,7 +9,7 @@
 #include "Serializer.h"
 #include <time.h>
 
-NesBus::NesBus(NesCpu& cpu, NesPpu& ppu, NesApu& apu, Input& input, NesCartridge& cart, OpenNesBusMapper& openNesBus)
+NesBus::NesBus(NesCpu& cpu, NesPpu& ppu, NesApu& apu, NesInput& input, NesCartridge& cart, OpenNesBusMapper& openNesBus)
     : cpu(cpu), ppu(ppu), apu(apu), input(input), cart(cart), openNesBus(openNesBus) {
     ramMapper.cpuRAM.fill(0);
 	readMemoryMap = new NesMemoryMapper*[0x10000]; // 64KB address space
