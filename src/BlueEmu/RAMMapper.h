@@ -2,10 +2,10 @@
 
 #include <cstdint>
 #include <array>
-#include "MemoryMapper.h"
+#include "NesMemoryMapper.h"
 
 // 2KB internal RAM (mirrored)
-class RAMMapper : public MemoryMapper {
+class RAMMapper : public NesMemoryMapper {
 
 public:
 	std::array<uint8_t, 2048> cpuRAM{};

@@ -18,10 +18,10 @@ class NesCpu;
 class NesBus;
 class SharedContext;
 
-class Cartridge
+class NesCartridge
 {
 public:
-	Cartridge(SharedContext& ctx, NesCpu& c);
+	NesCartridge(SharedContext& ctx, NesCpu& c);
 	void connectNesBus(NesBus* bus) { m_bus = bus; }
 
 	void LoadROM(const std::string& filePath);

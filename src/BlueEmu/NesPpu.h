@@ -4,7 +4,7 @@
 #include <array>
 #include <utility>
 #include "SharedContext.h"
-#include "MemoryMapper.h"
+#include "NesMemoryMapper.h"
 
 #ifdef _DEBUG
 #define LOG(...) dbg(__VA_ARGS__)
@@ -90,7 +90,7 @@ class Nes;
 class Serializer;
 class DebuggerContext;
 
-class NesPpu : public MemoryMapper
+class NesPpu : public NesMemoryMapper
 {
 public:
 	NesPpu(SharedContext& ctx, Nes& nes);

@@ -1,6 +1,6 @@
 #include "MMC3.h"
 #include "NesCpu.h"
-#include "Cartridge.h"
+#include "NesCartridge.h"
 #include "NesBus.h"
 #include "NesPpu.h"
 #include "RendererLoopy.h"

@@ -11,12 +11,12 @@ const int TARGET_SAMPLES_PER_FRAME = 735; // 44100 / 60 = 735 samples per frame
 
 class NesBus;
 class NesPpu;
-class Cartridge;
+class NesCartridge;
 class NesCpu;
 class NesApu;
 class Input;
 class SharedContext;
-class AudioMapper;
+class NesAudioMapper;
 class ReadController1Mapper;
 class ReadController2Mapper;
 class OpenNesBusMapper;
@@ -28,12 +28,12 @@ class Nes
 public:
 	NesBus& bus() { return *bus_; }
 	NesPpu& ppu() { return *ppu_; }
-	Cartridge& cart() { return *cart_; }
+	NesCartridge& cart() { return *cart_; }
 	NesCpu& cpu() { return *cpu_; }
 	NesApu& apu() { return *apu_; }
 	Input& input() { return *input_; }
 	SharedContext& context() { return *context_; }
-	AudioMapper& audioMapper() {
+	NesAudioMapper& audioMapper() {
 		return *audioMapper_;
 	}
 
@@ -56,12 +56,12 @@ public:
 
 	NesBus* bus_;
 	NesPpu* ppu_;
-	Cartridge* cart_;
+	NesCartridge* cart_;
 	NesCpu* cpu_;
 	NesApu* apu_;
 	Input* input_;
 	SharedContext* context_;
-	AudioMapper* audioMapper_;
+	NesAudioMapper* audioMapper_;
 	ReadController1Mapper* readController1Mapper_;
 	ReadController2Mapper* readController2Mapper_;
 	OpenNesBusMapper* openNesBus_;

@@ -3,9 +3,9 @@
 #include <stdint.h>
 #include <array>
 #include "NesCpu.h"
-#include "Cartridge.h"
+#include "NesCartridge.h"
 #include "RAMMapper.h"
-#include "MemoryMapper.h"
+#include "NesMemoryMapper.h"
 
 class NesPpu;
 class NesApu;
@@ -16,18 +16,18 @@ class Serializer;
 class NesBus
 {
 public:
-	NesBus(NesCpu& cpu, NesPpu& ppu, NesApu& apu, Input& input, Cartridge& cart, OpenNesBusMapper& openNesBus);
+	NesBus(NesCpu& cpu, NesPpu& ppu, NesApu& apu, Input& input, NesCartridge& cart, OpenNesBusMapper& openNesBus);
 	~NesBus();
 
 	RAMMapper ramMapper;
 	// Some addresses are mapped to different devices, so we use a memory map
 	// An example is 0x4017, which is mapped to the NesApu (write), but also to an Input device (read)
-	MemoryMapper** readMemoryMap; // 64KB memory map
-	MemoryMapper** writeMemoryMap; // 64KB memory map
+	NesMemoryMapper** readMemoryMap; // 64KB memory map
+	NesMemoryMapper** writeMemoryMap; // 64KB memory map
 
 	// Access functions
-	void ReadRegisterAdd(uint16_t start, uint16_t end, MemoryMapper* mapper);
-	void WriteRegisterAdd(uint16_t start, uint16_t end, MemoryMapper* mapper);
+	void ReadRegisterAdd(uint16_t start, uint16_t end, NesMemoryMapper* mapper);
+	void WriteRegisterAdd(uint16_t start, uint16_t end, NesMemoryMapper* mapper);
 	uint8_t read(uint16_t addr);
 	uint8_t peek(uint16_t addr);
 	void write(uint16_t addr, uint8_t data);
@@ -49,7 +49,7 @@ public:
 	NesCpu& cpu;
 	NesPpu& ppu;
 	NesApu& apu;
-	Cartridge& cart;
+	NesCartridge& cart;
 	Input& input;
 	OpenNesBusMapper& openNesBus;
 

@@ -1,10 +1,10 @@
 #pragma once
-#include "MemoryMapper.h"
+#include "NesMemoryMapper.h"
 
 class Input;
 class NesBus;
 
-class ReadController1Mapper : public MemoryMapper
+class ReadController1Mapper : public NesMemoryMapper
 {
 public:
 	ReadController1Mapper(Input& input);
@@ -20,7 +20,7 @@ private:
 	Input& m_input;
 };
 
-class ReadController2Mapper : public MemoryMapper
+class ReadController2Mapper : public NesMemoryMapper
 {
 public:
 	ReadController2Mapper(Input& input);

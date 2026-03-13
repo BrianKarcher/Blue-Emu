@@ -1,14 +1,14 @@
 #pragma once
 #include <cstdint>
 #include <vector>
-#include "MemoryMapper.h"
+#include "NesMemoryMapper.h"
 #include "INESLoader.h"
 #include "Serializer.h"
 
-class Cartridge;
+class NesCartridge;
 class NesBus;
 
-class Mapper : public MemoryMapper {
+class Mapper : public NesMemoryMapper {
 public:
 	std::vector<uint8_t> m_prgRomData;
 	std::vector<uint8_t> m_prgRamData;

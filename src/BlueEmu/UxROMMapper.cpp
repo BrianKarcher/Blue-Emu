@@ -1,6 +1,6 @@
 #include "UxROMMapper.h"
 #include "MMC3.h"
-#include "Cartridge.h"
+#include "NesCartridge.h"
 #include "NesBus.h"
 #include "NesPpu.h"
 #include "RendererLoopy.h"

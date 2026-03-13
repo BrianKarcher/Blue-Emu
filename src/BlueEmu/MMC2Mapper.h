@@ -3,7 +3,7 @@
 #include "MapperBase.h"
 
 class NesBus;
-class Cartridge;
+class NesCartridge;
 
 class MMC2Mapper : public MapperBase
 {
@@ -35,5 +35,5 @@ private:
 
     uint8_t prgBank8kCount;
     NesBus& bus;
-    Cartridge& cart;
+    NesCartridge& cart;
 };

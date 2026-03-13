@@ -7,7 +7,7 @@ class Core;
 class NesBus;
 class NesPpu;
 class SharedContext;
-class Cartridge;
+class NesCartridge;
 class DebuggerContext;
 
 class NesPpuViewer
@@ -40,7 +40,7 @@ private:
 	std::array<uint32_t, 64 * 64> *_oam;
 	std::array<uint32_t, 256 * 240> *_sprites;
 	Core* _core;
-	Cartridge* _cartridge;
+	NesCartridge* _cartridge;
 	NesPpu* _ppu;
 	SharedContext* _sharedContext;
 	DebuggerContext* _dbgContext;

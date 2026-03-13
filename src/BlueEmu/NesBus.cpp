@@ -1,19 +1,19 @@
 #include "NesBus.h"
 #include "NesPpu.h"
-#include "Cartridge.h"
+#include "NesCartridge.h"
 #include "Input.h"
 #include "NesCpu.h"
 #include "NesApu.h"
-#include "MemoryMapper.h"
+#include "NesMemoryMapper.h"
 #include "OpenNesBusMapper.h"
 #include "Serializer.h"
 #include <time.h>
 
-NesBus::NesBus(NesCpu& cpu, NesPpu& ppu, NesApu& apu, Input& input, Cartridge& cart, OpenNesBusMapper& openNesBus)
+NesBus::NesBus(NesCpu& cpu, NesPpu& ppu, NesApu& apu, Input& input, NesCartridge& cart, OpenNesBusMapper& openNesBus)
     : cpu(cpu), ppu(ppu), apu(apu), input(input), cart(cart), openNesBus(openNesBus) {
     ramMapper.cpuRAM.fill(0);
-	readMemoryMap = new MemoryMapper*[0x10000]; // 64KB address space
-	writeMemoryMap = new MemoryMapper*[0x10000]; // 64KB address space
+	readMemoryMap = new NesMemoryMapper*[0x10000]; // 64KB address space
+	writeMemoryMap = new NesMemoryMapper*[0x10000]; // 64KB address space
 	for (int i = 0; i < 0x10000; i++) {
 		readMemoryMap[i] = &openNesBus;
 		writeMemoryMap[i] = &openNesBus;
@@ -38,13 +38,13 @@ void NesBus::PowerCycle() {
 	ramMapper.cpuRAM.fill(0xFF);
 }
 
-void NesBus::ReadRegisterAdd(uint16_t start, uint16_t end, MemoryMapper* mapper) {
+void NesBus::ReadRegisterAdd(uint16_t start, uint16_t end, NesMemoryMapper* mapper) {
 	for (uint32_t addr = start; addr <= end; addr++) {
 		readMemoryMap[addr] = mapper;
 	}
 }
 
-void NesBus::WriteRegisterAdd(uint16_t start, uint16_t end, MemoryMapper* mapper) {
+void NesBus::WriteRegisterAdd(uint16_t start, uint16_t end, NesMemoryMapper* mapper) {
     for (uint32_t addr = start; addr <= end; addr++) {
         writeMemoryMap[addr] = mapper;
     }
@@ -52,8 +52,8 @@ void NesBus::WriteRegisterAdd(uint16_t start, uint16_t end, MemoryMapper* mapper
 
 void NesBus::initialize() {
 	// Initialize CPU RAM mapping
-	ReadRegisterAdd(0x0000, 0x1FFF, (MemoryMapper*)&ramMapper);
-	WriteRegisterAdd(0x0000, 0x1FFF, (MemoryMapper*)&ramMapper);
+	ReadRegisterAdd(0x0000, 0x1FFF, (NesMemoryMapper*)&ramMapper);
+	WriteRegisterAdd(0x0000, 0x1FFF, (NesMemoryMapper*)&ramMapper);
 }
 
 uint8_t NesBus::read(uint16_t addr) {

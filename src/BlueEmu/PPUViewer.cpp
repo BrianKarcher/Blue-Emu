@@ -16,7 +16,7 @@ void NesPpuViewer::CreateTexture(GLuint& id, int width, int height) {
 
 bool NesPpuViewer::Initialize(Core* core, SharedContext* sharedCtx) {
     _core = core;
-    _cartridge = core->emulator.GetCartridge();
+    _cartridge = core->emulator.GetNesCartridge();
 	_ppu = core->emulator.GetNesPpu();
     _sharedContext = sharedCtx;
     _dbgContext = _sharedContext->debugger_context;

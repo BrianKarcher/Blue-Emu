@@ -11,7 +11,7 @@
 #include "DebuggerContext.h"
 #include "Mapper.h"
 #include <array>
-#include "Cartridge.h"
+#include "NesCartridge.h"
 
 HWND m_hwnd;
 

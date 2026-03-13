@@ -71,10 +71,10 @@
     <ClCompile Include="AudioBackend.cpp">
       <Filter>Core\Shared</Filter>
     </ClCompile>
-    <ClCompile Include="AudioMapper.cpp">
+    <ClCompile Include="NesAudioMapper.cpp">
       <Filter>Core\NES</Filter>
     </ClCompile>
-    <ClCompile Include="Cartridge.cpp">
+    <ClCompile Include="NesCartridge.cpp">
       <Filter>Core\NES</Filter>
     </ClCompile>
     <ClCompile Include="Core.cpp">
@@ -209,10 +209,10 @@
     <ClInclude Include="NesApu.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
-    <ClInclude Include="AudioMapper.h">
+    <ClInclude Include="NesAudioMapper.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
-    <ClInclude Include="Cartridge.h">
+    <ClInclude Include="NesCartridge.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
     <ClInclude Include="Core.h">
@@ -230,7 +230,7 @@
     <ClInclude Include="InputMappers.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
-    <ClInclude Include="MemoryMapper.h">
+    <ClInclude Include="NesMemoryMapper.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
     <ClInclude Include="OpenNesBusMapper.h">

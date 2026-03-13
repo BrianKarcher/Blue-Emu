@@ -1,4 +1,4 @@
-#include "Cartridge.h"
+#include "NesCartridge.h"
 #include <string>
 #include "NesBus.h"
 #include "INESLoader.h"
@@ -23,7 +23,7 @@
 #include <string>
 #include <zip.h> // The libzip header
 
-std::vector<uint8_t> Cartridge::ReadNesFromZip(const std::string& zipPath) {
+std::vector<uint8_t> NesCartridge::ReadNesFromZip(const std::string& zipPath) {
     int err = 0;
 
     zip* archive = zip_open(zipPath.c_str(), 0, &err);
@@ -72,7 +72,7 @@ std::vector<uint8_t> Cartridge::ReadNesFromZip(const std::string& zipPath) {
     return buffer;
 }
 
-Cartridge::Cartridge(SharedContext& ctx, NesCpu& c) : cpu(c), ctx(ctx) {
+NesCartridge::NesCartridge(SharedContext& ctx, NesCpu& c) : cpu(c), ctx(ctx) {
 	m_isLoaded = false;
 }
 
@@ -84,14 +84,14 @@ std::filesystem::path getAppFolderPath()
     return std::filesystem::path(buf).parent_path();
 }
 
-std::filesystem::path Cartridge::getAndEnsureSavePath() {
+std::filesystem::path NesCartridge::getAndEnsureSavePath() {
     std::filesystem::path appFolder = getAppFolderPath();
     std::filesystem::path sramPath = appFolder / "Save";
     std::filesystem::create_directories(sramPath);
     return sramPath;
 }
 
-void Cartridge::loadSRAM() {
+void NesCartridge::loadSRAM() {
     mapper->m_prgRamData.resize(0x2000);
     if (!isBatteryBacked) {
         return;
@@ -109,7 +109,7 @@ void Cartridge::loadSRAM() {
         throw std::runtime_error("Failed to read file");
 }
 
-void Cartridge::saveSRAM() {
+void NesCartridge::saveSRAM() {
     if (!isBatteryBacked)
 		return;
     std::filesystem::path appFolder = getAndEnsureSavePath();
@@ -121,7 +121,7 @@ void Cartridge::saveSRAM() {
     out.write(reinterpret_cast<const char*>(mapper->m_prgRamData.data()), mapper->m_prgRamData.size());
 }
 
-void Cartridge::unload() {
+void NesCartridge::unload() {
     saveSRAM();
     if (mapper) {
         mapper->m_prgRomData.clear();
@@ -134,7 +134,7 @@ void Cartridge::unload() {
     m_isLoaded = false;
 }
 
-std::vector<uint8_t> Cartridge::LoadFileToBuffer(const std::string& path) {
+std::vector<uint8_t> NesCartridge::LoadFileToBuffer(const std::string& path) {
     // Check if it's an archive by extension
     if (path.find(".7z") != std::string::npos || path.find(".zip") != std::string::npos) {
         return ReadNesFromZip(path);
@@ -151,7 +151,7 @@ std::vector<uint8_t> Cartridge::LoadFileToBuffer(const std::string& path) {
     return buffer;
 }
 
-void Cartridge::LoadROM(const std::string& filePath) {
+void NesCartridge::LoadROM(const std::string& filePath) {
     INESLoader ines;
     std::filesystem::path filepath(filePath);
     ines_file_t inesFile;
@@ -178,7 +178,7 @@ void Cartridge::LoadROM(const std::string& filePath) {
 }
 
 // TODO - This could be refactored into a factory.
-void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
+void NesCartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
     if (mapper) {
         mapper->shutdown();
         delete mapper;
@@ -216,16 +216,16 @@ void Cartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
     }
 }
 
-uint8_t Cartridge::ReadPRGRAM(uint16_t address) {
+uint8_t NesCartridge::ReadPRGRAM(uint16_t address) {
     return mapper->m_prgRamData[address - 0x6000];
 }
 
-void Cartridge::WritePRGRAM(uint16_t address, uint8_t data) {
+void NesCartridge::WritePRGRAM(uint16_t address, uint8_t data) {
     mapper->m_prgRamData[address - 0x6000] = data;
 }
 
 // ---------------- Debug helper ----------------
-inline void Cartridge::dbg(const wchar_t* fmt, ...) {
+inline void NesCartridge::dbg(const wchar_t* fmt, ...) {
     wchar_t buf[512];
     va_list args;
     va_start(args, fmt);
@@ -233,11 +233,11 @@ inline void Cartridge::dbg(const wchar_t* fmt, ...) {
     va_end(args);
 }
 
-void Cartridge::SetPrgRamEnabled(bool enable) {
+void NesCartridge::SetPrgRamEnabled(bool enable) {
     LOG(L"Setting PrgRamEnabled to %d\n", enable);
     isPrgRamEnabled = enable;
 }
 
-bool Cartridge::isLoaded() {
+bool NesCartridge::isLoaded() {
 	return m_isLoaded;
 }

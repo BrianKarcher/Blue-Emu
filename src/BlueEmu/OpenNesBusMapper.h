@@ -1,8 +1,8 @@
 #pragma once
 #include <cstdint>
-#include "MemoryMapper.h"
+#include "NesMemoryMapper.h"
 
-class OpenNesBusMapper : public MemoryMapper
+class OpenNesBusMapper : public NesMemoryMapper
 {
 private:
 	uint8_t openNesBus;

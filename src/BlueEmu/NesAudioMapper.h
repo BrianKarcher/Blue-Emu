@@ -2,20 +2,20 @@
 
 #include <cstdint>
 #include <array>
-#include "MemoryMapper.h"
+#include "NesMemoryMapper.h"
 
 class NesApu;
 class NesBus;
 
-class AudioMapper : public MemoryMapper {
+class NesAudioMapper : public NesMemoryMapper {
 public:
 	NesApu& apu;
 
-	AudioMapper(NesApu& apu) : apu(apu) {
+	NesAudioMapper(NesApu& apu) : apu(apu) {
 
 	}
 
-	~AudioMapper() {
+	~NesAudioMapper() {
 
 	}
 

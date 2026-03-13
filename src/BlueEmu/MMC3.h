@@ -5,7 +5,7 @@
 #include "A12Mapper.h"
 
 class NesBus;
-class Cartridge;
+class NesCartridge;
 class NesCpu;
 class RendererLoopy;
 
@@ -50,7 +50,7 @@ private:
 
 	uint8_t m_regSelect;
 
-	Cartridge* cart;
+	NesCartridge* cart;
 	NesCpu& cpu;
 	NesBus& bus;
 

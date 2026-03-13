@@ -2,11 +2,11 @@
 #include <cstdint>
 #include "MapperBase.h"
 
-class Cartridge;
+class NesCartridge;
 
 class NROM : public MapperBase {
 public:
-	NROM(Cartridge* cartridge);
+	NROM(NesCartridge* cartridge);
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	void shutdown() { }
 	void Serialize(Serializer& serializer) override {
@@ -19,5 +19,5 @@ public:
 	void RecomputeChrMappings() override;
 
 private:
-	Cartridge* cartridge;
+	NesCartridge* cartridge;
 };

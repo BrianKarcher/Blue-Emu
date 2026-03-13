@@ -4,7 +4,7 @@
 #include "MapperBase.h"
 
 class NesBus;
-class Cartridge;
+class NesCartridge;
 class CPU;
 class RendererLoopy;
 
@@ -34,6 +34,6 @@ private:
 	uint8_t prg_bank_select;  // Selected 16KB bank for $8000-$BFFF
 	uint8_t prgBank16kCount;
 
-	Cartridge* cart;
+	NesCartridge* cart;
 	NesBus& bus;
 };

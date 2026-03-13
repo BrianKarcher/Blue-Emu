@@ -140,10 +140,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AudioBackend.cpp" />
-    <ClCompile Include="AudioMapper.cpp" />
+    <ClCompile Include="NesAudioMapper.cpp" />
     <ClCompile Include="AxROMMapper.cpp" />
     <ClCompile Include="NesBus.cpp" />
-    <ClCompile Include="Cartridge.cpp" />
+    <ClCompile Include="NesCartridge.cpp" />
     <ClCompile Include="CNROM.cpp" />
     <ClCompile Include="Core.cpp" />
     <ClCompile Include="DebuggerContext.cpp" />
@@ -181,11 +181,11 @@
   <ItemGroup>
     <ClInclude Include="A12Mapper.h" />
     <ClInclude Include="AudioBackend.h" />
-    <ClInclude Include="AudioMapper.h" />
+    <ClInclude Include="NesAudioMapper.h" />
     <ClInclude Include="AudioRingBuffer.h" />
     <ClInclude Include="AxROMMapper.h" />
     <ClInclude Include="NesBus.h" />
-    <ClInclude Include="Cartridge.h" />
+    <ClInclude Include="NesCartridge.h" />
     <ClInclude Include="CNROM.h" />
     <ClInclude Include="CommandQueue.h" />
     <ClInclude Include="Core.h" />
@@ -201,7 +201,7 @@
     <ClInclude Include="Mapper.h" />
     <ClInclude Include="MapperBase.h" />
     <ClInclude Include="MemoryBuffer.h" />
-    <ClInclude Include="MemoryMapper.h" />
+    <ClInclude Include="NesMemoryMapper.h" />
     <ClInclude Include="MMC1.h" />
     <ClInclude Include="MMC2Mapper.h" />
     <ClInclude Include="MMC3.h" />

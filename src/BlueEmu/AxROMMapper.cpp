@@ -1,8 +1,8 @@
 #include "AxROMMapper.h"
-#include "Cartridge.h"
+#include "NesCartridge.h"
 #include "NesPpu.h"
 
-AxROMMapper::AxROMMapper(Cartridge* cartridge, uint8_t prgRom16kSize) : cartridge(cartridge) {
+AxROMMapper::AxROMMapper(NesCartridge* cartridge, uint8_t prgRom16kSize) : cartridge(cartridge) {
 	MapperBase::SetPrgPageSize(0x8000);
 	MapperBase::SetChrPageSize(0x2000);
 	prgBank32kCount = prgRom16kSize / 2;

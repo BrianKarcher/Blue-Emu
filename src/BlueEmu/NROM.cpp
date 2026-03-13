@@ -1,7 +1,7 @@
 #include "NROM.h"
-#include "Cartridge.h"
+#include "NesCartridge.h"
 
-NROM::NROM(Cartridge* cartridge) {
+NROM::NROM(NesCartridge* cartridge) {
 	MapperBase::SetPrgPageSize(0x4000);
 	MapperBase::SetChrPageSize(0x2000);
 	this->cartridge = cartridge;
