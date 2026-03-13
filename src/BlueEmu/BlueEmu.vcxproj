@@ -143,7 +143,6 @@
     <ClCompile Include="AudioMapper.cpp" />
     <ClCompile Include="AxROMMapper.cpp" />
     <ClCompile Include="Bus.cpp" />
-    <ClCompile Include="CartMapper.cpp" />
     <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="CNROM.cpp" />
     <ClCompile Include="Core.cpp" />
@@ -186,7 +185,6 @@
     <ClInclude Include="AudioRingBuffer.h" />
     <ClInclude Include="AxROMMapper.h" />
     <ClInclude Include="Bus.h" />
-    <ClInclude Include="CartMapper.h" />
     <ClInclude Include="Cartridge.h" />
     <ClInclude Include="CNROM.h" />
     <ClInclude Include="CommandQueue.h" />

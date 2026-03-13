@@ -1,28 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="AudioBackend.cpp" />
-    <ClCompile Include="AudioMapper.cpp" />
-    <ClCompile Include="Bus.cpp" />
-    <ClCompile Include="CartMapper.cpp" />
-    <ClCompile Include="Cartridge.cpp" />
-    <ClCompile Include="Core.cpp" />
-    <ClCompile Include="DebuggerContext.cpp" />
-    <ClCompile Include="DebuggerUI.cpp" />
-    <ClCompile Include="EmulatorCore.cpp" />
-    <ClCompile Include="HexViewer.cpp" />
-    <ClCompile Include="INESLoader.cpp" />
-    <ClCompile Include="Input.cpp" />
-    <ClCompile Include="InputMappers.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Nes.cpp" />
-    <ClCompile Include="PPU.cpp" />
-    <ClCompile Include="CPU.cpp" />
-    <ClCompile Include="PPUViewer.cpp" />
-    <ClCompile Include="RendererLoopy.cpp" />
-    <ClCompile Include="SDL_UI.cpp" />
-    <ClCompile Include="Serializer.cpp" />
-    <ClCompile Include="SharedContext.cpp" />
     <ClCompile Include="..\third party\imgui\imgui.cpp">
       <Filter>Third Party\Imgui</Filter>
     </ClCompile>
@@ -74,38 +53,72 @@
     <ClCompile Include="NROM.cpp">
       <Filter>Mappers</Filter>
     </ClCompile>
+    <ClCompile Include="Bus.cpp">
+      <Filter>Core\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="CPU.cpp">
+      <Filter>Core\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="Nes.cpp">
+      <Filter>Core\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="PPU.cpp">
+      <Filter>Core\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="RendererLoopy.cpp">
+      <Filter>Core\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioBackend.cpp">
+      <Filter>Core\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioMapper.cpp">
+      <Filter>Core\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="Cartridge.cpp">
+      <Filter>Core\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="Core.cpp">
+      <Filter>UI</Filter>
+    </ClCompile>
+    <ClCompile Include="SDL_UI.cpp">
+      <Filter>UI</Filter>
+    </ClCompile>
+    <ClCompile Include="PPUViewer.cpp">
+      <Filter>UI</Filter>
+    </ClCompile>
+    <ClCompile Include="EmulatorCore.cpp">
+      <Filter>Core\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="InputMappers.cpp">
+      <Filter>Core\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="Serializer.cpp">
+      <Filter>Core\Shared</Filter>
+    </ClCompile>
+    <ClCompile Include="INESLoader.cpp">
+      <Filter>Core\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="HexViewer.cpp">
+      <Filter>UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Input.cpp">
+      <Filter>Core\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="DebuggerContext.cpp">
+      <Filter>Core\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="DebuggerUI.cpp">
+      <Filter>UI</Filter>
+    </ClCompile>
+    <ClCompile Include="SharedContext.cpp">
+      <Filter>Core\Shared</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AudioBackend.h" />
-    <ClInclude Include="AudioMapper.h" />
     <ClInclude Include="AudioRingBuffer.h" />
-    <ClInclude Include="Bus.h" />
-    <ClInclude Include="CartMapper.h" />
-    <ClInclude Include="Cartridge.h" />
-    <ClInclude Include="CommandQueue.h" />
-    <ClInclude Include="Core.h" />
-    <ClInclude Include="DebuggerContext.h" />
     <ClInclude Include="DebuggerUI.h" />
-    <ClInclude Include="EmulatorCore.h" />
-    <ClInclude Include="HexViewer.h" />
-    <ClInclude Include="INESLoader.h" />
-    <ClInclude Include="Input.h" />
-    <ClInclude Include="InputMappers.h" />
     <ClInclude Include="main.h" />
-    <ClInclude Include="MemoryBuffer.h" />
-    <ClInclude Include="MemoryMapper.h" />
-    <ClInclude Include="Nes.h" />
-    <ClInclude Include="APU.h" />
-    <ClInclude Include="OpenBusMapper.h" />
-    <ClInclude Include="PPU.h" />
-    <ClInclude Include="CPU.h" />
-    <ClInclude Include="PPUViewer.h" />
-    <ClInclude Include="RAMMapper.h" />
-    <ClInclude Include="RendererLoopy.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="SDL_UI.h" />
-    <ClInclude Include="Serializer.h" />
-    <ClInclude Include="SharedContext.h" />
     <ClInclude Include="..\third party\imgui\imgui.h">
       <Filter>Third Party\Imgui</Filter>
     </ClInclude>
@@ -175,6 +188,81 @@
     <ClInclude Include="MapperBase.h">
       <Filter>Mappers</Filter>
     </ClInclude>
+    <ClInclude Include="Bus.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="CPU.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="Nes.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="PPU.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="RendererLoopy.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioBackend.h">
+      <Filter>Core\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="APU.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="AudioMapper.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="Cartridge.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="Core.h">
+      <Filter>UI</Filter>
+    </ClInclude>
+    <ClInclude Include="SDL_UI.h">
+      <Filter>UI</Filter>
+    </ClInclude>
+    <ClInclude Include="PPUViewer.h">
+      <Filter>UI</Filter>
+    </ClInclude>
+    <ClInclude Include="EmulatorCore.h">
+      <Filter>Core\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="InputMappers.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryMapper.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="OpenBusMapper.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="Serializer.h">
+      <Filter>Core\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryBuffer.h">
+      <Filter>Core\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="INESLoader.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="HexViewer.h">
+      <Filter>UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Input.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="CommandQueue.h">
+      <Filter>Core\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="DebuggerContext.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="RAMMapper.h">
+      <Filter>Core\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="SharedContext.h">
+      <Filter>Core\Shared</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BlueNES.rc" />
@@ -205,6 +293,18 @@
     </Filter>
     <Filter Include="Mappers">
       <UniqueIdentifier>{bb9fe524-da3a-4ab8-bc16-bc5684f68736}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UI">
+      <UniqueIdentifier>{65ea2550-b094-48de-b9d1-c348ca86df47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core">
+      <UniqueIdentifier>{6e2ece9e-1586-425c-97af-28a46ec9b564}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\NES">
+      <UniqueIdentifier>{7698c6aa-3b47-438e-a4be-b4482a6c15cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core\Shared">
+      <UniqueIdentifier>{77e57fca-b190-4334-91bc-a40a8c0462af}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
