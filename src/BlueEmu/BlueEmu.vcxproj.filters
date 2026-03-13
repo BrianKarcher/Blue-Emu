@@ -1,0 +1,163 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="AudioBackend.cpp" />
+    <ClCompile Include="AudioMapper.cpp" />
+    <ClCompile Include="AxROMMapper.cpp" />
+    <ClCompile Include="Bus.cpp" />
+    <ClCompile Include="CartMapper.cpp" />
+    <ClCompile Include="Cartridge.cpp" />
+    <ClCompile Include="CNROM.cpp" />
+    <ClCompile Include="Core.cpp" />
+    <ClCompile Include="DebuggerContext.cpp" />
+    <ClCompile Include="DebuggerUI.cpp" />
+    <ClCompile Include="DxROM.cpp" />
+    <ClCompile Include="EmulatorCore.cpp" />
+    <ClCompile Include="HexViewer.cpp" />
+    <ClCompile Include="INESLoader.cpp" />
+    <ClCompile Include="Input.cpp" />
+    <ClCompile Include="InputMappers.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mapper.cpp" />
+    <ClCompile Include="MapperBase.cpp" />
+    <ClCompile Include="MMC1.cpp" />
+    <ClCompile Include="MMC2Mapper.cpp" />
+    <ClCompile Include="MMC3.cpp" />
+    <ClCompile Include="Nes.cpp" />
+    <ClCompile Include="PPU.cpp" />
+    <ClCompile Include="CPU.cpp" />
+    <ClCompile Include="NROM.cpp" />
+    <ClCompile Include="PPUViewer.cpp" />
+    <ClCompile Include="RendererLoopy.cpp" />
+    <ClCompile Include="SDL_UI.cpp" />
+    <ClCompile Include="Serializer.cpp" />
+    <ClCompile Include="SharedContext.cpp" />
+    <ClCompile Include="UxROMMapper.cpp" />
+    <ClCompile Include="..\third party\imgui\imgui.cpp">
+      <Filter>Third Party\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\imgui_draw.cpp">
+      <Filter>Third Party\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\backends\imgui_impl_opengl3.cpp">
+      <Filter>Third Party\Imgui\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\backends\imgui_impl_sdl2.cpp">
+      <Filter>Third Party\Imgui\Backends</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\imgui_tables.cpp">
+      <Filter>Third Party\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\imgui_widgets.cpp">
+      <Filter>Third Party\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third party\imgui\file\ImGuiFileDialog.cpp">
+      <Filter>Third Party\Imgui\File</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="A12Mapper.h" />
+    <ClInclude Include="AudioBackend.h" />
+    <ClInclude Include="AudioMapper.h" />
+    <ClInclude Include="AudioRingBuffer.h" />
+    <ClInclude Include="AxROMMapper.h" />
+    <ClInclude Include="Bus.h" />
+    <ClInclude Include="CartMapper.h" />
+    <ClInclude Include="Cartridge.h" />
+    <ClInclude Include="CNROM.h" />
+    <ClInclude Include="CommandQueue.h" />
+    <ClInclude Include="Core.h" />
+    <ClInclude Include="DebuggerContext.h" />
+    <ClInclude Include="DebuggerUI.h" />
+    <ClInclude Include="DxROM.h" />
+    <ClInclude Include="EmulatorCore.h" />
+    <ClInclude Include="HexViewer.h" />
+    <ClInclude Include="INESLoader.h" />
+    <ClInclude Include="Input.h" />
+    <ClInclude Include="InputMappers.h" />
+    <ClInclude Include="main.h" />
+    <ClInclude Include="Mapper.h" />
+    <ClInclude Include="MapperBase.h" />
+    <ClInclude Include="MemoryBuffer.h" />
+    <ClInclude Include="MemoryMapper.h" />
+    <ClInclude Include="MMC1.h" />
+    <ClInclude Include="MMC2Mapper.h" />
+    <ClInclude Include="MMC3.h" />
+    <ClInclude Include="Nes.h" />
+    <ClInclude Include="APU.h" />
+    <ClInclude Include="OpenBusMapper.h" />
+    <ClInclude Include="PPU.h" />
+    <ClInclude Include="CPU.h" />
+    <ClInclude Include="NROM.h" />
+    <ClInclude Include="PPUViewer.h" />
+    <ClInclude Include="RAMMapper.h" />
+    <ClInclude Include="RendererLoopy.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="SDL_UI.h" />
+    <ClInclude Include="Serializer.h" />
+    <ClInclude Include="SharedContext.h" />
+    <ClInclude Include="..\third party\imgui\file\dirent\dirent.h" />
+    <ClInclude Include="UxROMMapper.h" />
+    <ClInclude Include="..\third party\imgui\imgui.h">
+      <Filter>Third Party\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\imconfig.h">
+      <Filter>Third Party\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\backends\imgui_impl_opengl3.h">
+      <Filter>Third Party\Imgui\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\backends\imgui_impl_opengl3_loader.h">
+      <Filter>Third Party\Imgui\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\backends\imgui_impl_sdl2.h">
+      <Filter>Third Party\Imgui\Backends</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\imgui_internal.h">
+      <Filter>Third Party\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\file\ImGuiFileDialog.h">
+      <Filter>Third Party\Imgui\File</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\file\ImGuiFileDialogConfig.h">
+      <Filter>Third Party\Imgui\File</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\imstb_rectpack.h">
+      <Filter>Third Party\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\imstb_textedit.h">
+      <Filter>Third Party\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\imstb_truetype.h">
+      <Filter>Third Party\Imgui</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="BlueNES.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\..\..\Downloads\icons8-play-50.png" />
+    <Image Include="Images\empty-circle.png" />
+    <Image Include="Images\filled-circle.png" />
+    <Image Include="Images\pause.png" />
+    <Image Include="Images\play.png" />
+    <Image Include="toolbar1.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\readme.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Third Party">
+      <UniqueIdentifier>{cec71338-4a04-4ea6-98ba-7be5a4903981}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Third Party\Imgui">
+      <UniqueIdentifier>{65d081d5-509f-424b-b521-bf4d51425aa6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Third Party\Imgui\Backends">
+      <UniqueIdentifier>{114b54f2-7fb3-4259-a414-42e6b3c89b94}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Third Party\Imgui\File">
+      <UniqueIdentifier>{f6a1db36-5e8c-4d33-a401-9e682c81ae04}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
