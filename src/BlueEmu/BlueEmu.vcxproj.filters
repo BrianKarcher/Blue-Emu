@@ -3,36 +3,26 @@
   <ItemGroup>
     <ClCompile Include="AudioBackend.cpp" />
     <ClCompile Include="AudioMapper.cpp" />
-    <ClCompile Include="AxROMMapper.cpp" />
     <ClCompile Include="Bus.cpp" />
     <ClCompile Include="CartMapper.cpp" />
     <ClCompile Include="Cartridge.cpp" />
-    <ClCompile Include="CNROM.cpp" />
     <ClCompile Include="Core.cpp" />
     <ClCompile Include="DebuggerContext.cpp" />
     <ClCompile Include="DebuggerUI.cpp" />
-    <ClCompile Include="DxROM.cpp" />
     <ClCompile Include="EmulatorCore.cpp" />
     <ClCompile Include="HexViewer.cpp" />
     <ClCompile Include="INESLoader.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="InputMappers.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Mapper.cpp" />
-    <ClCompile Include="MapperBase.cpp" />
-    <ClCompile Include="MMC1.cpp" />
-    <ClCompile Include="MMC2Mapper.cpp" />
-    <ClCompile Include="MMC3.cpp" />
     <ClCompile Include="Nes.cpp" />
     <ClCompile Include="PPU.cpp" />
     <ClCompile Include="CPU.cpp" />
-    <ClCompile Include="NROM.cpp" />
     <ClCompile Include="PPUViewer.cpp" />
     <ClCompile Include="RendererLoopy.cpp" />
     <ClCompile Include="SDL_UI.cpp" />
     <ClCompile Include="Serializer.cpp" />
     <ClCompile Include="SharedContext.cpp" />
-    <ClCompile Include="UxROMMapper.cpp" />
     <ClCompile Include="..\third party\imgui\imgui.cpp">
       <Filter>Third Party\Imgui</Filter>
     </ClCompile>
@@ -54,41 +44,61 @@
     <ClCompile Include="..\third party\imgui\file\ImGuiFileDialog.cpp">
       <Filter>Third Party\Imgui\File</Filter>
     </ClCompile>
+    <ClCompile Include="MMC1.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="MMC2Mapper.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="MMC3.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="DxROM.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="UxROMMapper.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="AxROMMapper.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="CNROM.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="MapperBase.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="Mapper.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="NROM.cpp">
+      <Filter>Mappers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="A12Mapper.h" />
     <ClInclude Include="AudioBackend.h" />
     <ClInclude Include="AudioMapper.h" />
     <ClInclude Include="AudioRingBuffer.h" />
-    <ClInclude Include="AxROMMapper.h" />
     <ClInclude Include="Bus.h" />
     <ClInclude Include="CartMapper.h" />
     <ClInclude Include="Cartridge.h" />
-    <ClInclude Include="CNROM.h" />
     <ClInclude Include="CommandQueue.h" />
     <ClInclude Include="Core.h" />
     <ClInclude Include="DebuggerContext.h" />
     <ClInclude Include="DebuggerUI.h" />
-    <ClInclude Include="DxROM.h" />
     <ClInclude Include="EmulatorCore.h" />
     <ClInclude Include="HexViewer.h" />
     <ClInclude Include="INESLoader.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="InputMappers.h" />
     <ClInclude Include="main.h" />
-    <ClInclude Include="Mapper.h" />
-    <ClInclude Include="MapperBase.h" />
     <ClInclude Include="MemoryBuffer.h" />
     <ClInclude Include="MemoryMapper.h" />
-    <ClInclude Include="MMC1.h" />
-    <ClInclude Include="MMC2Mapper.h" />
-    <ClInclude Include="MMC3.h" />
     <ClInclude Include="Nes.h" />
     <ClInclude Include="APU.h" />
     <ClInclude Include="OpenBusMapper.h" />
     <ClInclude Include="PPU.h" />
     <ClInclude Include="CPU.h" />
-    <ClInclude Include="NROM.h" />
     <ClInclude Include="PPUViewer.h" />
     <ClInclude Include="RAMMapper.h" />
     <ClInclude Include="RendererLoopy.h" />
@@ -96,8 +106,6 @@
     <ClInclude Include="SDL_UI.h" />
     <ClInclude Include="Serializer.h" />
     <ClInclude Include="SharedContext.h" />
-    <ClInclude Include="..\third party\imgui\file\dirent\dirent.h" />
-    <ClInclude Include="UxROMMapper.h" />
     <ClInclude Include="..\third party\imgui\imgui.h">
       <Filter>Third Party\Imgui</Filter>
     </ClInclude>
@@ -131,6 +139,42 @@
     <ClInclude Include="..\third party\imgui\imstb_truetype.h">
       <Filter>Third Party\Imgui</Filter>
     </ClInclude>
+    <ClInclude Include="MMC1.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MMC2Mapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="MMC3.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="DxROM.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="UxROMMapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="AxROMMapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="CNROM.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="Mapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="NROM.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="A12Mapper.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third party\imgui\file\dirent\dirent.h">
+      <Filter>Third Party\Imgui\File</Filter>
+    </ClInclude>
+    <ClInclude Include="MapperBase.h">
+      <Filter>Mappers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BlueNES.rc" />
@@ -158,6 +202,9 @@
     </Filter>
     <Filter Include="Third Party\Imgui\File">
       <UniqueIdentifier>{f6a1db36-5e8c-4d33-a401-9e682c81ae04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Mappers">
+      <UniqueIdentifier>{bb9fe524-da3a-4ab8-bc16-bc5684f68736}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
