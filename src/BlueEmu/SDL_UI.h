@@ -8,7 +8,7 @@
 #include <math.h>
 #include <array>
 #include "bus.h"
-#include "PPU.h"
+#include "NesPpu.h"
 #include "NesCpu.h"
 #include "APU.h"
 #include "Input.h"
@@ -71,7 +71,7 @@ public:
 	HWND hHexCombo = NULL;
 	HWND hHexDrawArea = NULL;
 	int hexView = 0;
-	//PPUViewer ppuViewer;
+	//NesPpuViewer ppuViewer;
 private:
 	SDL_Window* window = nullptr;
 	SDL_Renderer* renderer = nullptr;
@@ -123,5 +123,5 @@ private:
 	std::array<uint8_t(*)(SDL_UI*, uint16_t), 2> hexSources;
 };
 
-uint8_t hexReadPPU(SDL_UI* core, uint16_t val);
+uint8_t hexReadNesPpu(SDL_UI* core, uint16_t val);
 uint8_t hexReadCPU(SDL_UI* core, uint16_t val);

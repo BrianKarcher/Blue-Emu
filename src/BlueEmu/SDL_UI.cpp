@@ -170,7 +170,7 @@ HRESULT SDL_UI::CreateWindows() {
     //}
 
     hexSources[0] = hexReadCPU;
-    hexSources[1] = hexReadPPU;
+    hexSources[1] = hexReadNesPpu;
 
     ShowWindow(m_hwnd, SW_SHOWNORMAL);
     ShowWindow(m_hwndHex, SW_SHOWNORMAL);
@@ -180,7 +180,7 @@ HRESULT SDL_UI::CreateWindows() {
     return S_OK;
 }
 
-uint8_t hexReadPPU(SDL_UI* core, uint16_t val) {
+uint8_t hexReadNesPpu(SDL_UI* core, uint16_t val) {
     //return core->emulator.nes.ppu.ReadVRAM(val);
     return 0;
 }
@@ -214,7 +214,7 @@ LRESULT CALLBACK SDL_UI::HexWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
         int index = SendMessage(pMain->hHexCombo, CB_ADDSTRING, 0, (LPARAM)L"CPU Memory");
         SendMessage(pMain->hHexCombo, CB_SETITEMDATA, index, (LPARAM)0);
-        index = SendMessage(pMain->hHexCombo, CB_ADDSTRING, 0, (LPARAM)L"PPU Memory");
+        index = SendMessage(pMain->hHexCombo, CB_ADDSTRING, 0, (LPARAM)L"NesPpu Memory");
         SendMessage(pMain->hHexCombo, CB_SETITEMDATA, index, (LPARAM)1);
         index = SendMessage(pMain->hHexCombo, CB_SETCURSEL, 0, 0);
 

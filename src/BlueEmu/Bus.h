@@ -7,7 +7,7 @@
 #include "RAMMapper.h"
 #include "MemoryMapper.h"
 
-class PPU;
+class NesPpu;
 class APU;
 class Input;
 class OpenBusMapper;
@@ -16,7 +16,7 @@ class Serializer;
 class Bus
 {
 public:
-	Bus(NesCpu& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus);
+	Bus(NesCpu& cpu, NesPpu& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus);
 	~Bus();
 
 	RAMMapper ramMapper;
@@ -47,7 +47,7 @@ public:
 
 	// Devices connected to the bus
 	NesCpu& cpu;
-	PPU& ppu;
+	NesPpu& ppu;
 	APU& apu;
 	Cartridge& cart;
 	Input& input;

@@ -5,12 +5,12 @@
 
 class Core;
 class Bus;
-class PPU;
+class NesPpu;
 class SharedContext;
 class Cartridge;
 class DebuggerContext;
 
-class PPUViewer
+class NesPpuViewer
 {
 public:
 	bool Initialize(Core* core, SharedContext* sharedCtx);
@@ -41,7 +41,7 @@ private:
 	std::array<uint32_t, 256 * 240> *_sprites;
 	Core* _core;
 	Cartridge* _cartridge;
-	PPU* _ppu;
+	NesPpu* _ppu;
 	SharedContext* _sharedContext;
 	DebuggerContext* _dbgContext;
 };

@@ -49,7 +49,7 @@ public:
         uint64_t cycle;
     };
 
-    struct PPUState {
+    struct NesPpuState {
         uint8_t ctrl;
         uint8_t mask;
 		uint8_t status;
@@ -80,5 +80,5 @@ public:
     std::atomic<uint16_t> step_over_target{ 0xFFFF };
 
     CpuState lastState{};
-    PPUState ppuState{};
+    NesPpuState ppuState{};
 };

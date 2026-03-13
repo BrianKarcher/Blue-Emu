@@ -2,7 +2,7 @@
 #include "NesCpu.h"
 #include "Cartridge.h"
 #include "Bus.h"
-#include "PPU.h"
+#include "NesPpu.h"
 #include "RendererLoopy.h"
 #include "Mapper.h"
 
@@ -199,7 +199,7 @@ bool MMC3::IrqPending() {
 	return _irqPending;
 }
 
-// Called by PPU when PPU address changes (A12 detection)
+// Called by NesPpu when NesPpu address changes (A12 detection)
 void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 	if (ppu_address >= 0x2000) {
 		return;

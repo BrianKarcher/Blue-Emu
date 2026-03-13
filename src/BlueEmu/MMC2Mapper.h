@@ -14,7 +14,7 @@ public:
     void RecomputePrgMappings() override;
     void RecomputeChrMappings() override;
 
-    // Crucial for MMC2: We must intercept PPU reads to handle the bank latches
+    // Crucial for MMC2: We must intercept NesPpu reads to handle the bank latches
     inline uint8_t readCHR(uint16_t addr) override;
 
     void Serialize(Serializer& serializer) override;

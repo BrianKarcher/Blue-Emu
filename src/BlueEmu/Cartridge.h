@@ -25,7 +25,7 @@ public:
 	void connectBus(Bus* bus) { m_bus = bus; }
 
 	void LoadROM(const std::string& filePath);
-	// Map a PPU address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)
+	// Map a NesPpu address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)
 	uint16_t MirrorNametable(uint16_t addr);
 	uint8_t ReadPRGRAM(uint16_t address);
 	void WritePRGRAM(uint16_t address, uint8_t data);

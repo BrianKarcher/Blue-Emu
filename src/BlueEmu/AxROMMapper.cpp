@@ -1,6 +1,6 @@
 #include "AxROMMapper.h"
 #include "Cartridge.h"
-#include "PPU.h"
+#include "NesPpu.h"
 
 AxROMMapper::AxROMMapper(Cartridge* cartridge, uint8_t prgRom16kSize) : cartridge(cartridge) {
 	MapperBase::SetPrgPageSize(0x8000);

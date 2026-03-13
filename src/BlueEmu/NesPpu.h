@@ -17,32 +17,32 @@
 #define NAMETABLE_WIDTH 32
 #define NAMETABLE_HEIGHT 30
 #define TILE_SIZE 8
-#define PPUCTRL 0x2000
-#define PPUMASK 0x2001
-#define PPUSTATUS 0x2002
+#define NesPpuCTRL 0x2000
+#define NesPpuMASK 0x2001
+#define NesPpuSTATUS 0x2002
 #define OAMADDR 0x2003
 #define OAMDATA 0x2004
-#define PPUSCROLL 0x2005
-#define PPUADDR 0x2006
-#define PPUDATA 0x2007
-#define PPUCTRL_SPRITESIZE 0x20
-#define PPUCTRL_INCREMENT 0x04
-#define PPUCTRL_SPRITE_PATTERN_TABLE 0x08
-#define PPUCTRL_BACKGROUND_PATTERN_TABLE 0x10
-#define PPUSTATUS_VBLANK 0x80
-#define PPUSTATUS_SPRITE0_HIT 0x40
-#define PPUSTATUS_SPRITE_OVERFLOW 0x20
-#define PPUMASK_GRAYSCALE 0x01
-#define PPUMASK_BACKGRONDLEFT 0x02
-#define PPUMASK_SPRITELEFT 0x04
-#define PPUMASK_BACKGROUNDENABLED 0x08
-#define PPUMASK_SPRITEENABLED 0x10
-#define PPUMASK_EMPHASIZERED 0x20
-#define PPUMASK_EMPHASIZEGREEN 0x40
-#define PPUMASK_EMPHASIZEBLUE 0x80
-#define PPUMASK_RENDERINGEITHER PPUMASK_BACKGROUNDENABLED | PPUMASK_SPRITEENABLED
+#define NesPpuSCROLL 0x2005
+#define NesPpuADDR 0x2006
+#define NesPpuDATA 0x2007
+#define NesPpuCTRL_SPRITESIZE 0x20
+#define NesPpuCTRL_INCREMENT 0x04
+#define NesPpuCTRL_SPRITE_PATTERN_TABLE 0x08
+#define NesPpuCTRL_BACKGROUND_PATTERN_TABLE 0x10
+#define NesPpuSTATUS_VBLANK 0x80
+#define NesPpuSTATUS_SPRITE0_HIT 0x40
+#define NesPpuSTATUS_SPRITE_OVERFLOW 0x20
+#define NesPpuMASK_GRAYSCALE 0x01
+#define NesPpuMASK_BACKGRONDLEFT 0x02
+#define NesPpuMASK_SPRITELEFT 0x04
+#define NesPpuMASK_BACKGROUNDENABLED 0x08
+#define NesPpuMASK_SPRITEENABLED 0x10
+#define NesPpuMASK_EMPHASIZERED 0x20
+#define NesPpuMASK_EMPHASIZEGREEN 0x40
+#define NesPpuMASK_EMPHASIZEBLUE 0x80
+#define NesPpuMASK_RENDERINGEITHER NesPpuMASK_BACKGROUNDENABLED | NesPpuMASK_SPRITEENABLED
 
-//#define PPUDEBUG
+//#define NesPpuDEBUG
 
 // RGB
 // NES color palette (64 colors)
@@ -90,11 +90,11 @@ class Nes;
 class Serializer;
 class DebuggerContext;
 
-class PPU : public MemoryMapper
+class NesPpu : public MemoryMapper
 {
 public:
-	PPU(SharedContext& ctx, Nes& nes);
-	~PPU();
+	NesPpu(SharedContext& ctx, Nes& nes);
+	~NesPpu();
 	void register_memory(Bus& bus);
 	void initialize();
 	void connectBus(Bus* bus) { this->bus = bus; }
@@ -130,8 +130,8 @@ public:
 	std::array<uint8_t, 32> paletteTable; // 32 bytes palette table
 	uint16_t GetVRAMAddress() const;
 	void SetVRAMAddress(uint16_t addr);
-	uint8_t GetPPUStatus() const { return m_ppuStatus; }
-	uint8_t GetPPUCtrl() const { return m_ppuCtrl; }
+	uint8_t GetNesPpuStatus() const { return m_ppuStatus; }
+	uint8_t GetNesPpuCtrl() const { return m_ppuCtrl; }
 	
 	uint8_t m_ppuMask = 0;
 	uint8_t m_ppuStatus = 0;
@@ -140,13 +140,13 @@ public:
 	uint8_t get_tile_pixel_color_index(uint8_t tileIndex, uint8_t pixelInTileX, uint8_t pixelInTileY, bool isSprite, bool isSecondSprite);
 	bool isFrameComplete();
 	void setFrameComplete(bool complete);
-	void SetPPUStatus(uint8_t flag);
+	void SetNesPpuStatus(uint8_t flag);
 	uint16_t GetBackgroundPatternTableBase() const {
-		return (m_ppuCtrl & 0x10) ? 0x1000 : 0x0000; // Bit 4 of PPUCTRL
+		return (m_ppuCtrl & 0x10) ? 0x1000 : 0x0000; // Bit 4 of NesPpuCTRL
 	};
 	uint16_t GetSpritePatternTableBase(uint8_t tileId) const {
-		if (!(m_ppuCtrl & PPUCTRL_SPRITESIZE)) {
-			return (m_ppuCtrl & 0x08) ? 0x1000 : 0x0000; // Bit 3 of PPUCTRL
+		if (!(m_ppuCtrl & NesPpuCTRL_SPRITESIZE)) {
+			return (m_ppuCtrl & 0x08) ? 0x1000 : 0x0000; // Bit 3 of NesPpuCTRL
 		}
 		else {
 			return (tileId & 1) == 1 ? 0x1000 : 0x000;
@@ -165,7 +165,7 @@ private:
 	uint32_t* buffer;
 	bool is_failure = false;
 
-	uint8_t ppuDataBuffer = 0; // Internal buffer for PPUDATA reads
+	uint8_t ppuDataBuffer = 0; // Internal buffer for NesPpuDATA reads
 
 	void write_vram(uint16_t addr, uint8_t value);
 	void performDMA(uint8_t page);

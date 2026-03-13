@@ -161,7 +161,7 @@
     <ClCompile Include="MMC2Mapper.cpp" />
     <ClCompile Include="MMC3.cpp" />
     <ClCompile Include="Nes.cpp" />
-    <ClCompile Include="PPU.cpp" />
+    <ClCompile Include="NesPpu.cpp" />
     <ClCompile Include="NesCpu.cpp" />
     <ClCompile Include="NROM.cpp" />
     <ClCompile Include="PPUViewer.cpp" />
@@ -208,7 +208,7 @@
     <ClInclude Include="Nes.h" />
     <ClInclude Include="APU.h" />
     <ClInclude Include="OpenBusMapper.h" />
-    <ClInclude Include="PPU.h" />
+    <ClInclude Include="NesPpu.h" />
     <ClInclude Include="NesCpu.h" />
     <ClInclude Include="NROM.h" />
     <ClInclude Include="PPUViewer.h" />

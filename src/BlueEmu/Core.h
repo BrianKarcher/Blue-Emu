@@ -6,7 +6,7 @@
 #include <math.h>
 #include <array>
 #include "bus.h"
-#include "PPU.h"
+#include "NesPpu.h"
 #include "NesCpu.h"
 #include "APU.h"
 #include "Input.h"
@@ -58,7 +58,7 @@ public:
 	ImGuiIO io;
 	SharedContext context;
 	EmulatorCore emulator;
-	PPUViewer ppuViewer;
+	NesPpuViewer ppuViewer;
 	
 	// Register the window class and call methods for instantiating drawing resources
 	HRESULT Initialize();
@@ -93,7 +93,7 @@ public:
 	int hexView = 0;
 	DebuggerUI debuggerUI;
 	HexViewer hexViewer;
-	//PPUViewer ppuViewer;
+	//NesPpuViewer ppuViewer;
 private:
 	GLuint nes_texture;
 	GLuint pbo;

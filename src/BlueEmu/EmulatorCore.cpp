@@ -4,7 +4,7 @@
 #include "AudioRingBuffer.h"
 #include <chrono>
 #include "NesCpu.h"
-#include "PPU.h"
+#include "NesPpu.h"
 #include "APU.h"
 #include "Bus.h"
 #include "Input.h"
@@ -138,7 +138,7 @@ int EmulatorCore::runFrame() {
     nes.audioBuffer.clear();
 	nes.cpu_->cyclesThisFrame = 0;
     nes.ppu_->setBuffer(context.GetBackBuffer());
-    // Run PPU until frame complete (89342 cycles per frame)
+    // Run NesPpu until frame complete (89342 cycles per frame)
 	while (!nes.frameReady() && context.is_running) {
         nes.clock();
 	}

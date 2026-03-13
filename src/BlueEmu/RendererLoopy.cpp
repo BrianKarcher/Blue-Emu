@@ -1,22 +1,21 @@
-// NES PPU Loopy Registers Implementation
+// NES NesPpu Loopy Registers Implementation
 // Based on the loopy register behavior documented by loopy
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "PPU.h"
+#include "NesPpu.h"
 #include "A12Mapper.h"
 #include "Core.h"
 #include "Bus.h"
 #include "SharedContext.h"
 #include "RendererLoopy.h"
 #include "Serializer.h"
-#include "PPU.h"
 
 RendererLoopy::RendererLoopy(SharedContext& ctx) : context(ctx) {
 
 }
 
-void RendererLoopy::initialize(PPU* ppu) {
+void RendererLoopy::initialize(NesPpu* ppu) {
     m_ppu = ppu;
     m_bus = ppu->bus;
 }
@@ -29,15 +28,15 @@ void RendererLoopy::reset() {
     memset(context.GetBackBuffer(), 0x00, WIDTH * HEIGHT * sizeof(uint32_t));
 }
 
-// Write to PPUCTRL ($2000)
-void RendererLoopy::setPPUCTRL(uint8_t value) {
+// Write to NesPpuCTRL ($2000)
+void RendererLoopy::setNesPpuCTRL(uint8_t value) {
     // t: ...GH.. ........ <- d: ......GH
     // G = bit 1, H = bit 0 (nametable select)
     loopy.t.nametable_x = (value >> 0) & 1;
     loopy.t.nametable_y = (value >> 1) & 1;
 }
 
-// Write to PPUSCROLL ($2005)
+// Write to NesPpuSCROLL ($2005)
 void RendererLoopy::writeScroll(uint8_t value) {
     if (!loopy.w) {
         // First write (X scroll)
@@ -56,7 +55,7 @@ void RendererLoopy::writeScroll(uint8_t value) {
     }
 }
 
-// Read from PPUSCROLL ($2005)
+// Read from NesPpuSCROLL ($2005)
 uint8_t RendererLoopy::getScrollY() {
     return ((loopy.t.coarse_y & 0x1F) << 3) | (loopy.t.fine_y & 0x07);
 }
@@ -65,7 +64,7 @@ uint8_t RendererLoopy::getScrollX() {
     return ((loopy.t.coarse_x & 0x1F) << 3) | (loopy.x & 0x07);
 }
 
-// Write to PPUADDR ($2006)
+// Write to NesPpuADDR ($2006)
 void RendererLoopy::ppuWriteAddr(uint8_t value) {
     if (!loopy.w) {
         // First write (high byte)
@@ -83,20 +82,20 @@ void RendererLoopy::ppuWriteAddr(uint8_t value) {
         *t_ptr = (*t_ptr & 0xFF00) | value;
         *(uint16_t*)&loopy.v = *(uint16_t*)&loopy.t;
         loopy.w = false;
-		// MMC3 IRQ handling: clock IRQ counter on PPUADDR write
-        // "Should decrement when A12 is toggled via PPUADDR"
+		// MMC3 IRQ handling: clock IRQ counter on NesPpuADDR write
+        // "Should decrement when A12 is toggled via NesPpuADDR"
         if (m_ppu->m_mapper) {
             m_ppu->m_mapper->ClockIRQCounter(*t_ptr);
         }
     }
 }
 
-uint16_t RendererLoopy::getPPUAddr() {
+uint16_t RendererLoopy::getNesPpuAddr() {
     uint16_t* v_ptr = (uint16_t*)&loopy.v;
 	return (*v_ptr & 0b11111111111111); // The address is 14 bits
 }
 
-// Read from PPUSTATUS ($2002)
+// Read from NesPpuSTATUS ($2002)
 void RendererLoopy::ppuReadStatus() {
     // w:                   <- 0
     loopy.w = false;
@@ -155,7 +154,7 @@ uint16_t RendererLoopy::ppuGetVramAddr() {
     return *(uint16_t*)&loopy.v & 0x3FFF;  // 14-bit address
 }
 
-// Increment VRAM address (after PPUDATA read/write)
+// Increment VRAM address (after NesPpuDATA read/write)
 void RendererLoopy::ppuIncrementVramAddr(uint8_t increment) {
     uint16_t* v_ptr = (uint16_t*)&loopy.v;
     *v_ptr = (*v_ptr + increment) & 0x7FFF;
@@ -193,7 +192,7 @@ void RendererLoopy::renderPixelBackground(uint32_t* buffer) {
 inline void RendererLoopy::ApplyColorEmphasis(uint32_t& finalColor)
 {
     // 4. Color Emphasis Implementation
-    // Bits 5, 6, 7 of PPUMASK: R, G, B (NTSC)
+    // Bits 5, 6, 7 of NesPpuMASK: R, G, B (NTSC)
     if (ppumask & 0xE0) {
         // Extract RGB components (assuming 0xRRGGBB or 0xBBGGRR format)
         // Adjust shifts based on your m_nesPalette format
@@ -219,11 +218,11 @@ void RendererLoopy::renderPixel(uint32_t* buffer) {
     uint8_t bgPaletteIndex = m_ppu->paletteTable[0];
     bool bgOpaque = false;
     // Determine whether or not to show the background in the leftmost 8 pixels of the screen.
-    if (bgEnabled() && (dot > 8 || (ppumask & PPUMASK_BACKGRONDLEFT) != 0)) {
+    if (bgEnabled() && (dot > 8 || (ppumask & NesPpuMASK_BACKGRONDLEFT) != 0)) {
         uint8_t pixel = get_pixel();
         bgPaletteIndex = m_ppu->paletteTable[pixel];
         bgOpaque = pixel != 0;
-        if (ppumask & PPUMASK_GRAYSCALE) {
+        if (ppumask & NesPpuMASK_GRAYSCALE) {
             bgPaletteIndex &= 0x30; // Grayscale mode: only use bits 4 and 5 for color
         }
     }
@@ -236,21 +235,21 @@ void RendererLoopy::renderPixel(uint32_t* buffer) {
 	bool spriteIsZero = false;
 
     uint8_t finalIdx = bgPaletteIndex;
-    if (spriteEnabled() && (dot > 8 || (ppumask & PPUMASK_SPRITELEFT) != 0)) {
+    if (spriteEnabled() && (dot > 8 || (ppumask & NesPpuMASK_SPRITELEFT) != 0)) {
         bool useSprite = false;
 
         const auto& spr = spriteLineBuffer[x];
         if (spr.valid) {  // There's a sprite pixel here
             uint8_t palIdx = spr.palette + 4;
             uint8_t sprIdx = m_ppu->paletteTable[0x10 + (spr.palette << 2) + spr.colorIndex];
-            if (ppumask & PPUMASK_GRAYSCALE) {
+            if (ppumask & NesPpuMASK_GRAYSCALE) {
                 sprIdx &= 0x30; // Grayscale mode: only use bits 4 and 5 for color
             }
             uint32_t sprColor = m_nesPalette[sprIdx];
 
             if (spr.isZero && bgOpaque && !hasSprite0HitBeenSet && x < 255) {
                 hasSprite0HitBeenSet = true;
-                m_ppu->SetPPUStatus(0x40);
+                m_ppu->SetNesPpuStatus(0x40);
             }
 
             if (!spr.behindBg || !bgOpaque) {
@@ -337,9 +336,9 @@ void RendererLoopy::shift_registers() {
 }
 
 /// <summary>
-/// Simulates the clock cycle of a PPU (Picture Processing Unit) renderer, handling pixel rendering,
-/// background tile fetching, sprite evaluation, and other PPU operations.
-/// This function is called once per PPU clock cycle (5.3M/sec) and updates the internal state of the
+/// Simulates the clock cycle of a NesPpu (Picture Processing Unit) renderer, handling pixel rendering,
+/// background tile fetching, sprite evaluation, and other NesPpu operations.
+/// This function is called once per NesPpu clock cycle (5.3M/sec) and updates the internal state of the
 /// renderer accordingly.
 /// This gets called 3 times per CPU cycle. Meaning, I need to make some speed improvements!
 /// </summary>
@@ -354,7 +353,7 @@ void RendererLoopy::clock(uint32_t* buffer) {
     if (m_scanline >= 240 && m_scanline < 261) {
         // NMI and such has to happen for the CPU to function.
         if (m_scanline == 241 && dot == 1) {
-            m_ppu->m_ppuStatus |= PPUSTATUS_VBLANK;
+            m_ppu->m_ppuStatus |= NesPpuSTATUS_VBLANK;
             m_frameComplete = true;
             // Inform EmulatorCore of frame completion.
             m_frameTick = true;
@@ -455,7 +454,7 @@ void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) 
         if (spriteY > 0xF0) {
             continue; // Empty sprite slot
         }
-        int spriteHeight = (m_ppu->m_ppuCtrl & PPUCTRL_SPRITESIZE) == 0 ? 8 : 16;
+        int spriteHeight = (m_ppu->m_ppuCtrl & NesPpuCTRL_SPRITESIZE) == 0 ? 8 : 16;
         if (screenY >= spriteY && screenY < (spriteY + spriteHeight)) {
             if (spriteCount < 8) {
                 // Copy sprite data to new OAM
@@ -471,7 +470,7 @@ void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) 
                 if (!hasOverflowBeenSet) {
                     // Set sprite overflow flag only once per frame
                     hasOverflowBeenSet = true;
-                    m_ppu->m_ppuStatus |= PPUSTATUS_SPRITE_OVERFLOW;
+                    m_ppu->m_ppuStatus |= NesPpuSTATUS_SPRITE_OVERFLOW;
                 }
                 break;
             }
@@ -481,7 +480,7 @@ void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) 
 
 // Converting into a state machine
 void RendererLoopy::prepareSpriteLine(int y) {
-    int spriteHeight = (m_ppu->m_ppuCtrl & PPUCTRL_SPRITESIZE) ? 16 : 8;
+    int spriteHeight = (m_ppu->m_ppuCtrl & NesPpuCTRL_SPRITESIZE) ? 16 : 8;
 
     // Determine which sprite slot (0-7) we are fetching
     // dot 257-264 = slot 0, 265-272 = slot 1, etc.
@@ -526,7 +525,7 @@ void RendererLoopy::prepareSpriteLine(int y) {
             spritePatternAddrLow[slot] = bank + tileId * 16 + row;
         }
         else {
-            // 8x8: PPUCTRL Bit 3 determines pattern table
+            // 8x8: NesPpuCTRL Bit 3 determines pattern table
             uint16_t bank = (m_ppu->m_ppuCtrl & 0x08) ? 0x1000 : 0x0000;
 
             if (s.y >= 0xF0) row = 0;

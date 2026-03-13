@@ -2,7 +2,7 @@
 #include "MMC3.h"
 #include "Cartridge.h"
 #include "Bus.h"
-#include "PPU.h"
+#include "NesPpu.h"
 #include "RendererLoopy.h"
 #include <array>
 

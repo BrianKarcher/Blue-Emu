@@ -82,7 +82,7 @@ struct RendererState {
 	uint16_t spritePatternAddrHigh[8];
 };
 
-struct PPUState {
+struct NesPpuState {
 	uint8_t oam[0x100];
 	uint8_t oamAddr;
 	uint8_t paletteTable[32];

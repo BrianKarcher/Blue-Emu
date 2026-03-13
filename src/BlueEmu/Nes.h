@@ -10,7 +10,7 @@ const double CYCLES_PER_SAMPLE = CPU_FREQ / 44100.0;  // 40.58 exact
 const int TARGET_SAMPLES_PER_FRAME = 735; // 44100 / 60 = 735 samples per frame
 
 class Bus;
-class PPU;
+class NesPpu;
 class Cartridge;
 class NesCpu;
 class APU;
@@ -27,7 +27,7 @@ class Nes
 {
 public:
 	Bus& bus() { return *bus_; }
-	PPU& ppu() { return *ppu_; }
+	NesPpu& ppu() { return *ppu_; }
 	Cartridge& cart() { return *cart_; }
 	NesCpu& cpu() { return *cpu_; }
 	APU& apu() { return *apu_; }
@@ -55,7 +55,7 @@ public:
 	std::vector<float> audioBuffer;
 
 	Bus* bus_;
-	PPU* ppu_;
+	NesPpu* ppu_;
 	Cartridge* cart_;
 	NesCpu* cpu_;
 	APU* apu_;

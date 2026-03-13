@@ -9,10 +9,10 @@
 HexViewer::HexViewer(Core* core, SharedContext& sharedCtx) : _sharedCtx(sharedCtx), _dbgCtx(sharedCtx.debugger_context) {
     _bus = core->emulator.GetBus();
     hexSources[CPU_SOURCE] = HexReadCPU;
-	hexSources[PPU_SOURCE] = HexReadPPU;
+	hexSources[NesPpu_SOURCE] = HexReadNesPpu;
 }
 
-uint8_t HexReadPPU(HexViewer hexViewer, uint16_t addr) {
+uint8_t HexReadNesPpu(HexViewer hexViewer, uint16_t addr) {
     if (addr < 0x2000) {
         return hexViewer._dbgCtx->ppuState.chrMemory[addr];
     }
@@ -41,7 +41,7 @@ void HexViewer::DrawMemoryViewer(const char* title, bool *hexOpen) {
     ImGui::Begin(title, hexOpen);
 
     // 1. Dropdown for Hex Source
-    const char* sources[] = { "CPU Bus", "PPU VRAM", "OAM", "Palette" };
+    const char* sources[] = { "CPU Bus", "NesPpu VRAM", "OAM", "Palette" };
     static int current_source = 0; // Local state or use pMain->hexView
 
     ImGui::SetNextItemWidth(150); // Keep it compact
@@ -51,7 +51,7 @@ void HexViewer::DrawMemoryViewer(const char* title, bool *hexOpen) {
 
         // Optional: Update 'size' based on source
         if (sourceIdx == CPU_SOURCE) size = 0x10000; // CPU range
-		else if (sourceIdx == PPU_SOURCE) size = 0x4000; // PPU range
+		else if (sourceIdx == NesPpu_SOURCE) size = 0x4000; // NesPpu range
     }
 
     ImGui::SameLine();

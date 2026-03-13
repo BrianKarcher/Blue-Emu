@@ -1,6 +1,6 @@
 #include "Bus.h"
 #include <Windows.h>
-#include "PPU.h"
+#include "NesPpu.h"
 #include "RendererLoopy.h"
 #include "OpenBusMapper.h"
 #include "Serializer.h"
@@ -11,7 +11,7 @@
 #include <thread>
 #include <chrono>
 
-NesCpu::NesCpu(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg, PPU& ppu) : openBus(openBus), sharedCtx(ctx), dbgCtx(dbg), ppu(ppu) {
+NesCpu::NesCpu(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg, NesPpu& ppu) : openBus(openBus), sharedCtx(ctx), dbgCtx(dbg), ppu(ppu) {
 	init_cpu();
 }
 
@@ -54,7 +54,7 @@ bool NesCpu::ShouldPause() {
 /// <summary>
 /// As long as the game is not paused, execute one and only one CPU cycle.
 /// This may involve fetching a new instruction or executing a micro-op of the current instruction.
-/// "Always run once" keeps the CPU, APU and PPU in sync.
+/// "Always run once" keeps the CPU, APU and NesPpu in sync.
 /// Note the difference between instructions and cycles.
 /// This function gets called 1.79 million times per second.
 /// The state machines are designed to run on a per-cycle basis. On each cycle, a bus access MUST occur.

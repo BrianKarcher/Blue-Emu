@@ -62,7 +62,7 @@
     <ClCompile Include="Nes.cpp">
       <Filter>Core\NES</Filter>
     </ClCompile>
-    <ClCompile Include="PPU.cpp">
+    <ClCompile Include="NesPpu.cpp">
       <Filter>Core\NES</Filter>
     </ClCompile>
     <ClCompile Include="RendererLoopy.cpp">
@@ -197,7 +197,7 @@
     <ClInclude Include="Nes.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
-    <ClInclude Include="PPU.h">
+    <ClInclude Include="NesPpu.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
     <ClInclude Include="RendererLoopy.h">

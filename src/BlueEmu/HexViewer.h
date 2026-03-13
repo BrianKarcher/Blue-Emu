@@ -10,7 +10,7 @@ class Bus;
 
 // Memory sources
 #define CPU_SOURCE 0
-#define PPU_SOURCE 1
+#define NesPpu_SOURCE 1
 
 class HexViewer
 {
@@ -26,5 +26,5 @@ private:
 	std::array<uint8_t(*)(HexViewer hexViewer, uint16_t), 2> hexSources;
 };
 
-uint8_t HexReadPPU(HexViewer hexViewer, uint16_t addr);
+uint8_t HexReadNesPpu(HexViewer hexViewer, uint16_t addr);
 uint8_t HexReadCPU(HexViewer hexViewer, uint16_t addr);

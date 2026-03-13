@@ -3,7 +3,7 @@
 #include <array>
 #include "SharedContext.h"
 
-class PPU;
+class NesPpu;
 class Bus;
 class A12Mapper;
 class Serializer;
@@ -24,7 +24,7 @@ public:
         bool isSprite0;
     } Sprite;
 
-    int m_scanline = 0; // Current PPU scanline (0-261)
+    int m_scanline = 0; // Current NesPpu scanline (0-261)
     int dot = 0;
 
     // Loopy register structure (15-bit VRAM address)
@@ -49,7 +49,7 @@ public:
         LoopyRegister t;  // Temporary VRAM address (15 bits) / address of top-left tile
         uint8_t x;        // Fine X scroll (3 bits)
         bool w;           // Write latch (first/second write toggle)
-    } PPURegisters;
+    } NesPpuRegisters;
 
     // Shift registers for rendering
     typedef struct {
@@ -69,19 +69,19 @@ public:
         uint8_t pattern_high;    // High bit plane
     } TileFetch;
 
-    PPURegisters loopy;
+    NesPpuRegisters loopy;
     ShiftRegisters m_shifts;
 
     RendererLoopy(SharedContext& ctx);
-    void initialize(PPU* ppu);
+    void initialize(NesPpu* ppu);
     void reset();
-    void setPPUCTRL(uint8_t value);
-    void setPPUMask(uint8_t value) { ppumask = value; }
+    void setNesPpuCTRL(uint8_t value);
+    void setNesPpuMask(uint8_t value) { ppumask = value; }
     void writeScroll(uint8_t value);
     uint8_t getScrollY();
     uint8_t getScrollX();
     void ppuWriteAddr(uint8_t value);
-    uint16_t getPPUAddr();
+    uint16_t getNesPpuAddr();
     void ppuReadStatus();
     void ppuIncrementX();
     void ppuIncrementFineY();
@@ -104,7 +104,7 @@ public:
 
 private:
     Bus* m_bus;
-    PPU* m_ppu;
+    NesPpu* m_ppu;
     A12Mapper* m_mapper;
     SharedContext& context;
     // Overflow can only be set once per frame

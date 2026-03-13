@@ -399,7 +399,7 @@ void Core::RunMessageLoop()
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Debug")) {
-                    if (ImGui::MenuItem("PPU", nullptr)) {
+                    if (ImGui::MenuItem("NesPpu", nullptr)) {
 						_uiWindows.ppuOpen = !_uiWindows.ppuOpen;
                     }
                     if (ImGui::MenuItem("Memory", nullptr)) {
@@ -448,12 +448,12 @@ void Core::RunMessageLoop()
                 ImGui::Text("SP: %02X", _dbgCtx->lastState.sp);
 
                 ImGui::Separator();
-                ImGui::Text("PPU Flags:");
+                ImGui::Text("NesPpu Flags:");
                 ImGui::Text("Dot: %d", _dbgCtx->ppuState.dot);
                 ImGui::Text("Scanline: %d", _dbgCtx->ppuState.scanline);
-                bool bgLeft = (_dbgCtx->ppuState.mask & PPUMASK_BACKGRONDLEFT) != 0;
+                bool bgLeft = (_dbgCtx->ppuState.mask & NesPpuMASK_BACKGRONDLEFT) != 0;
                 ImGui::Checkbox("Background Mask", &bgLeft);
-                bool spLeft = (_dbgCtx->ppuState.mask & PPUMASK_SPRITELEFT) != 0;
+                bool spLeft = (_dbgCtx->ppuState.mask & NesPpuMASK_SPRITELEFT) != 0;
                 ImGui::Checkbox("Sprite Mask", &spLeft);
 
                 if (_dbgCtx->hit_breakpoint.load(std::memory_order_relaxed)) {
@@ -479,7 +479,7 @@ void Core::RunMessageLoop()
             debuggerUI.DrawScrollableDisassembler(&_uiWindows.debuggerOpen);
             hexViewer.DrawMemoryViewer("Memory Viewer", &_uiWindows.hexOpen); // 64KB of addressable memory
 
-			ppuViewer.Draw("PPU Viewer", &_uiWindows.ppuOpen);
+			ppuViewer.Draw("NesPpu Viewer", &_uiWindows.ppuOpen);
 
             // NES Display Window
             ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);

@@ -6,7 +6,7 @@
 #include "imgui.h"
 #include "DebuggerContext.h"
 
-void PPUViewer::CreateTexture(GLuint& id, int width, int height) {
+void NesPpuViewer::CreateTexture(GLuint& id, int width, int height) {
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
@@ -14,10 +14,10 @@ void PPUViewer::CreateTexture(GLuint& id, int width, int height) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
-bool PPUViewer::Initialize(Core* core, SharedContext* sharedCtx) {
+bool NesPpuViewer::Initialize(Core* core, SharedContext* sharedCtx) {
     _core = core;
     _cartridge = core->emulator.GetCartridge();
-	_ppu = core->emulator.GetPPU();
+	_ppu = core->emulator.GetNesPpu();
     _sharedContext = sharedCtx;
     _dbgContext = _sharedContext->debugger_context;
     nt = new std::array<std::array<uint32_t, 256 * 240>, 4>();
@@ -37,13 +37,13 @@ bool PPUViewer::Initialize(Core* core, SharedContext* sharedCtx) {
     return true;
 }
 
-void PPUViewer::UpdateTexture(int index, std::array<uint32_t, 256 * 240>& data) {
+void NesPpuViewer::UpdateTexture(int index, std::array<uint32_t, 256 * 240>& data) {
     glBindTexture(GL_TEXTURE_2D, ntTextures[index]);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 240, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, data.data());
     glBindTexture(GL_TEXTURE_2D, 0); // Unbind to avoid state bleeding
 }
 
-void PPUViewer::DrawWrappedRect(ImDrawList* draw_list, ImVec2 canvas_p0, float x, float y) {
+void NesPpuViewer::DrawWrappedRect(ImDrawList* draw_list, ImVec2 canvas_p0, float x, float y) {
     float viewW = 256.0f;
     float viewH = 240.0f;
     float totalW = 512.0f;
@@ -74,8 +74,8 @@ void PPUViewer::DrawWrappedRect(ImDrawList* draw_list, ImVec2 canvas_p0, float x
     draw_seg(0, 0, w2, h2);    // Bottom-Right piece (wrapped)
 }
 
-uint16_t PPUViewer::GetBaseNametableAddress() {
-    // Bits 0 and 1 of PPUCTRL select the nametable
+uint16_t NesPpuViewer::GetBaseNametableAddress() {
+    // Bits 0 and 1 of NesPpuCTRL select the nametable
     // 0 = $2000 (Top Left)
     // 1 = $2400 (Top Right)
     // 2 = $2800 (Bottom Left)
@@ -86,7 +86,7 @@ uint16_t PPUViewer::GetBaseNametableAddress() {
 
 // TODO Improve speed with dirty rectangles
 // Also, cache the two nametables and only change them when needed (bank switch or write).
-void PPUViewer::DrawNametables() {
+void NesPpuViewer::DrawNametables() {
     if (_core->isPlaying && _sharedContext->coreRunning.load(std::memory_order_relaxed)) {
 		int nametableCount = _dbgContext->ppuState.mirrorMode == MapperBase::MirrorMode::FOUR_SCREEN ? 4 : 2;
         for (int i = 0; i < nametableCount; i++) {
@@ -125,7 +125,7 @@ void PPUViewer::DrawNametables() {
         ImGui::PopStyleVar(); // Always pop what you push
         ImGui::EndGroup();
 
-        // Get the base nametable index (0-3) from PPUCTRL
+        // Get the base nametable index (0-3) from NesPpuCTRL
         int ntIndex = GetBaseNametableAddress();
 
         // Get the fine scroll values from the Scroll Registers ($2005)
@@ -146,7 +146,7 @@ void PPUViewer::DrawNametables() {
         // Use the Wrapped Logic to ensure the box appears correctly across boundaries
         DrawWrappedRect(draw_list, canvas_p0, finalX, finalY);
 
-        ImGui::Text("PPUCTRL Bits: %d | Base Offset: (%.0f, %.0f)", ntIndex, baseX, baseY);
+        ImGui::Text("NesPpuCTRL Bits: %d | Base Offset: (%.0f, %.0f)", ntIndex, baseX, baseY);
         ImGui::Text("Fine Scroll: (%d, %d)", scrollX, scrollY);
 		std::string mirrorModeStr;
 		switch (_dbgContext->ppuState.mirrorMode) {
@@ -165,7 +165,7 @@ void PPUViewer::DrawNametables() {
 }
 
 // This generates a 128x128 pixel buffer for one pattern table
-void PPUViewer::UpdateCHRTexture(int bank, uint8_t palette_idx) {
+void NesPpuViewer::UpdateCHRTexture(int bank, uint8_t palette_idx) {
     uint32_t pixels[128 * 128];
 
     std::array<uint32_t, 4> palette;
@@ -196,7 +196,7 @@ void PPUViewer::UpdateCHRTexture(int bank, uint8_t palette_idx) {
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 128, 128, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
 }
 
-void PPUViewer::DrawCHRViewer() {
+void NesPpuViewer::DrawCHRViewer() {
     static int selected_palette = 0;
 
     // UI to select which palette to view the tiles with
@@ -216,7 +216,7 @@ void PPUViewer::DrawCHRViewer() {
     ImGui::Columns(1);
 }
 
-void PPUViewer::Draw(const char* title, bool* p_open) {
+void NesPpuViewer::Draw(const char* title, bool* p_open) {
 	if (!*p_open) return;
     if (!ImGui::Begin(title, p_open)) {
         ImGui::End();
@@ -224,7 +224,7 @@ void PPUViewer::Draw(const char* title, bool* p_open) {
     }
 
     if (_core->isPlaying && _sharedContext->coreRunning.load(std::memory_order_relaxed)) {
-        if (ImGui::BeginTabBar("PPUViews")) {
+        if (ImGui::BeginTabBar("NesPpuViews")) {
 
             if (ImGui::BeginTabItem("Nametables")) {
                 DrawNametables();
@@ -251,7 +251,7 @@ void PPUViewer::Draw(const char* title, bool* p_open) {
 
                     for (int j = 0; j < 4; j++) {
                         ImGui::PushID((i * 4) + j); // Unique ID for each row of buttons
-                        // Read the palette index from PPU VRAM ($3F00 range)
+                        // Read the palette index from NesPpu VRAM ($3F00 range)
                         uint16_t addr = 0x3F00 + (i * 4) + j;
                         uint8_t colorIndex = _ppu->PeekVRAM(addr) & 0x3F; // Mask to 64 colors
 
@@ -280,7 +280,7 @@ void PPUViewer::Draw(const char* title, bool* p_open) {
     ImGui::End();
 }
 
-void PPUViewer::renderNametable(std::array<uint32_t, 256 * 240>& buffer, int physicalTable)
+void NesPpuViewer::renderNametable(std::array<uint32_t, 256 * 240>& buffer, int physicalTable)
 {
     const uint16_t nametableAddr = physicalTable * 0x400;
 
@@ -316,7 +316,7 @@ void PPUViewer::renderNametable(std::array<uint32_t, 256 * 240>& buffer, int phy
     }
 }
 
-void PPUViewer::render_tile(std::array<uint32_t, 256 * 240>& buffer,
+void NesPpuViewer::render_tile(std::array<uint32_t, 256 * 240>& buffer,
     int pr, int pc, int tileIndex, std::array<uint32_t, 4>& colors) {
     
     int tileOffset = tileIndex * 16; // 16 bytes per tile
@@ -351,7 +351,7 @@ void PPUViewer::render_tile(std::array<uint32_t, 256 * 240>& buffer,
     }
 }
 
-void PPUViewer::get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex)
+void NesPpuViewer::get_palette_index_from_attribute(uint8_t attributeByte, int tileRow, int tileCol, uint8_t& paletteIndex)
 {
     // Each attribute byte covers a 4x4 tile area (32x32 pixels)
     // Determine which quadrant of the attribute byte the tile is in
@@ -382,13 +382,13 @@ void PPUViewer::get_palette_index_from_attribute(uint8_t attributeByte, int tile
     }
 }
 
-void PPUViewer::DrawOAMViewer() {
+void NesPpuViewer::DrawOAMViewer() {
     ImGui::Text("OAM (Object Attribute Memory) - 64 Sprites");
     ImGui::Separator();
 
     // Clear the OAM buffer
     _oam->fill(0xFF000000);
-    int spriteHeight = (_dbgContext->ppuState.ctrl & PPUCTRL_SPRITESIZE) ? 16 : 8;
+    int spriteHeight = (_dbgContext->ppuState.ctrl & NesPpuCTRL_SPRITESIZE) ? 16 : 8;
     if (spriteHeight == 16) {
 		return; // For simplicity, we only handle 8x8 sprites in this viewer for now. 8x16 sprites require more complex handling.
     }
@@ -414,7 +414,7 @@ void PPUViewer::DrawOAMViewer() {
         int gridX = (spriteIdx % 8) * 8;
         int gridY = (spriteIdx / 8) * 8;
 
-        // Get sprite pattern table (depends on PPUCTRL bit 3)
+        // Get sprite pattern table (depends on NesPpuCTRL bit 3)
         uint16_t spritePatternTableAddr = _dbgContext->ppuState.spritePatternTableAddr;
         uint16_t tileAddr = spritePatternTableAddr + (tileIdx * 16);
 

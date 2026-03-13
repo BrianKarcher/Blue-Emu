@@ -45,7 +45,7 @@ void MapperBase::SetPrgPage(uint16_t pageIndex, uint8_t bank) {
 
 void MapperBase::SetPrgRange(uint16_t startInclusive, uint16_t endExclusive, uint32_t bankOffset) {
 	// We shift by 8 because the _chrPages array is indexed by 256-byte chunks
-	// (0x2000 PPU range / 256 bytes = 32 entries)
+	// (0x2000 NesPpu range / 256 bytes = 32 entries)
 	uint8_t startPage = startInclusive >> 8;
 	uint8_t endPage = endExclusive >> 8;
 	for (int i = startPage; i < endPage; i++) {
@@ -75,7 +75,7 @@ void MapperBase::SetChrPage(uint16_t pageIndex, uint8_t bank) {
 
 void MapperBase::SetChrRange(uint16_t startInclusive, uint16_t endExclusive, uint8_t* source, uint32_t bankOffset) {
 	// We shift by 8 because the _chrPages array is indexed by 256-byte chunks
-	// (0x2000 PPU range / 256 bytes = 32 entries)
+	// (0x2000 NesPpu range / 256 bytes = 32 entries)
 	uint8_t startPage = startInclusive >> 8;
 	uint8_t endPage = endExclusive >> 8;
 	LOG(L"Mapper SetChrRange: start=0x%04X end=0x%04X bank=0x%08X\n", startInclusive, endExclusive, bankOffset);

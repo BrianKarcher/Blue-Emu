@@ -1,5 +1,5 @@
 #include "Bus.h"
-#include "PPU.h"
+#include "NesPpu.h"
 #include "Cartridge.h"
 #include "Input.h"
 #include "NesCpu.h"
@@ -9,7 +9,7 @@
 #include "Serializer.h"
 #include <time.h>
 
-Bus::Bus(NesCpu& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus)
+Bus::Bus(NesCpu& cpu, NesPpu& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus)
     : cpu(cpu), ppu(ppu), apu(apu), input(input), cart(cart), openBus(openBus) {
     ramMapper.cpuRAM.fill(0);
 	readMemoryMap = new MemoryMapper*[0x10000]; // 64KB address space

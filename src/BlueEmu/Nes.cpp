@@ -1,6 +1,6 @@
 #include "Nes.h"
 #include "Bus.h"
-#include "PPU.h"
+#include "NesPpu.h"
 #include "Cartridge.h"
 #include "NesCpu.h"
 #include "APU.h"
@@ -13,7 +13,7 @@
 #include "Serializer.h"
 #include "DebuggerContext.h"
 
-#define PPU_CYCLES_PER_CPU_CYCLE 3
+#define NesPpu_CYCLES_PER_CPU_CYCLE 3
 
 Nes::Nes(SharedContext& ctx) {
     context_ = &ctx;
@@ -21,7 +21,7 @@ Nes::Nes(SharedContext& ctx) {
     input_ = new Input();
     openBus_ = new OpenBusMapper();
     _debuggerContext = ctx.debugger_context;
-    ppu_ = new PPU(ctx, *this);
+    ppu_ = new NesPpu(ctx, *this);
     cpu_ = new NesCpu(*openBus_, ctx, *_debuggerContext, *ppu_);
     cart_ = new Cartridge(ctx, *cpu_);
     bus_ = new Bus(*cpu_, *ppu_, *apu_, *input_, *cart_, *openBus_);
