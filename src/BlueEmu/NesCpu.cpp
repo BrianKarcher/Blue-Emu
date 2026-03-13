@@ -6,20 +6,20 @@
 #include "Serializer.h"
 #include "DebuggerContext.h"
 #include "SharedContext.h"
-#include "CPU.h"
+#include "NesCpu.h"
 
 #include <thread>
 #include <chrono>
 
-CPU::CPU(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg, PPU& ppu) : openBus(openBus), sharedCtx(ctx), dbgCtx(dbg), ppu(ppu) {
+NesCpu::NesCpu(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg, PPU& ppu) : openBus(openBus), sharedCtx(ctx), dbgCtx(dbg), ppu(ppu) {
 	init_cpu();
 }
 
-void CPU::connectBus(Bus* bus) {
+void NesCpu::connectBus(Bus* bus) {
 	this->bus = bus;
 }
 
-bool CPU::ShouldPause() {
+bool NesCpu::ShouldPause() {
 	if (dbgCtx.HasBreakpoint(m_pc) && !dbgCtx.is_paused.load(std::memory_order_relaxed)) {
 		dbgCtx.is_paused.store(true);
 		dbgCtx.LogInstructionFetch(m_pc);
@@ -60,7 +60,7 @@ bool CPU::ShouldPause() {
 /// The state machines are designed to run on a per-cycle basis. On each cycle, a bus access MUST occur.
 /// Although some are dummy reads/writes, they must happen to keep the timing correct.
 /// </summary>
-void CPU::cpu_tick() {
+void NesCpu::cpu_tick() {
 	if (!isActive) return;
 	if (inst_complete) {
 		while (ShouldPause() && sharedCtx.is_running) {
@@ -127,7 +127,7 @@ void CPU::cpu_tick() {
 int cnt = 0;
 int cnt2 = 0;
 
-void CPU::Serialize(Serializer& serializer) {
+void NesCpu::Serialize(Serializer& serializer) {
 	CPUState cpu;
 	cpu.m_a = m_a;
 	cpu.m_x = m_x;
@@ -160,7 +160,7 @@ void CPU::Serialize(Serializer& serializer) {
 	serializer.Write(cpu);
 }
 
-void CPU::Deserialize(Serializer& serializer) {
+void NesCpu::Deserialize(Serializer& serializer) {
 	CPUState cpu;
 	serializer.Read(cpu);
 	m_a = cpu.m_a;
@@ -194,7 +194,7 @@ void CPU::Deserialize(Serializer& serializer) {
 }
 
 // ---------------- Debug helper ----------------
-inline void CPU::dbg(const wchar_t* fmt, ...) {
+inline void NesCpu::dbg(const wchar_t* fmt, ...) {
 #ifdef CPUDEBUG
 	//if (!debug) return;
 	wchar_t buf[512];
@@ -206,7 +206,7 @@ inline void CPU::dbg(const wchar_t* fmt, ...) {
 #endif
 }
 
-inline void CPU::dbgNmi(const wchar_t* fmt, ...) {
+inline void NesCpu::dbgNmi(const wchar_t* fmt, ...) {
 #ifdef NMIDEBUG
 	//if (!debug) return;
 	wchar_t buf[512];
@@ -218,7 +218,7 @@ inline void CPU::dbgNmi(const wchar_t* fmt, ...) {
 #endif
 }
 
-void CPU::PowerCycle() {
+void NesCpu::PowerCycle() {
 	uint8_t resetLo = ReadByte(0xFFFC);
 	uint8_t resHi = ReadByte(0xFFFD);
 	m_pc = (static_cast<uint16_t>(resHi << 8)) | resetLo;
@@ -252,21 +252,21 @@ void CPU::PowerCycle() {
 	run_irq = false;
 }
 
-void CPU::Activate(bool active)
+void NesCpu::Activate(bool active)
 {
 	isActive = active;
 }
 
-void CPU::Reset() {
+void NesCpu::Reset() {
 	reset_line = true;
 }
 
-void CPU::AddCycles(int count)
+void NesCpu::AddCycles(int count)
 {
 	m_cycle_count += count;
 }
 
-uint64_t CPU::GetCycleCount()
+uint64_t NesCpu::GetCycleCount()
 {
 	return m_cycle_count;
 }
@@ -274,7 +274,7 @@ uint64_t CPU::GetCycleCount()
 /// <summary>
 /// Only used for testing purposes to trigger an NMI immediately.
 /// </summary>
-void CPU::SetNMIImmediate() {
+void NesCpu::SetNMIImmediate() {
 	nmi_previous_need = true;
 	nmi_previous = true;
 	nmi_need = true;
@@ -282,64 +282,64 @@ void CPU::SetNMIImmediate() {
 }
 
 // Called by mappers/devices to set interrupt lines
-void CPU::setNMI(bool state) {
+void NesCpu::setNMI(bool state) {
 	nmi_line = state;
 }
 
 /// <summary>
 /// Only used for testing purposes to trigger an IRQ immediately.
 /// </summary>
-void CPU::SetIRQImmediate() {
+void NesCpu::SetIRQImmediate() {
 	run_irq = true;
 	prev_run_irq = true;
 }
 
-void CPU::setIRQ(bool state) {
+void NesCpu::setIRQ(bool state) {
 	irq_line = state;
 }
 
-void CPU::push(uint8_t value) {
+void NesCpu::push(uint8_t value) {
 	bus->write(0x0100 + m_sp, value);
 	m_sp--;
 }
 
-uint8_t CPU::pull() {
+uint8_t NesCpu::pull() {
 	m_sp++;
 	return bus->read(0x0100 + m_sp);
 }
 
-uint8_t CPU::GetSP() {
+uint8_t NesCpu::GetSP() {
 	return m_sp;
 }
 
-void CPU::SetSP(uint8_t sp) {
+void NesCpu::SetSP(uint8_t sp) {
 	m_sp = sp;
 }
 
-inline uint8_t CPU::ReadByte(uint16_t addr) {
+inline uint8_t NesCpu::ReadByte(uint16_t addr) {
 	return bus->read(addr);
 }
 
-void CPU::WriteByte(uint16_t addr, uint8_t value) {
+void NesCpu::WriteByte(uint16_t addr, uint8_t value) {
 	bus->write(addr, value);
 }
 
-uint8_t CPU::GetStatus()
+uint8_t NesCpu::GetStatus()
 {
 	return m_p;
 }
 
-void CPU::SetStatus(uint8_t status)
+void NesCpu::SetStatus(uint8_t status)
 {
 	m_p = status;
 }
 
-void CPU::ClearFlag(uint8_t flag)
+void NesCpu::ClearFlag(uint8_t flag)
 {
 	m_p &= ~flag;
 }
 
-inline void CPU::SetZero(uint8_t value)
+inline void NesCpu::SetZero(uint8_t value)
 {
 	// Set/clear zero flag
 	if (value == 0) {
@@ -350,7 +350,7 @@ inline void CPU::SetZero(uint8_t value)
 	}
 }
 
-inline void CPU::SetNegative(uint8_t value)
+inline void NesCpu::SetNegative(uint8_t value)
 {
 	// Set/clear negative flag (bit 7 of result)
 	if (value & 0x80) {
@@ -361,7 +361,7 @@ inline void CPU::SetNegative(uint8_t value)
 	}
 }
 
-inline void CPU::SetOverflow(bool condition)
+inline void NesCpu::SetOverflow(bool condition)
 {
 	if (condition) {
 		m_p |= FLAG_OVERFLOW;
@@ -371,7 +371,7 @@ inline void CPU::SetOverflow(bool condition)
 	}
 }
 
-inline void CPU::SetCarry(bool condition)
+inline void NesCpu::SetCarry(bool condition)
 {
 	if (condition) {
 		m_p |= FLAG_CARRY;
@@ -381,7 +381,7 @@ inline void CPU::SetCarry(bool condition)
 	}
 }
 
-inline void CPU::SetDecimal(bool condition)
+inline void NesCpu::SetDecimal(bool condition)
 {
 	if (condition) {
 		m_p |= FLAG_DECIMAL;
@@ -391,7 +391,7 @@ inline void CPU::SetDecimal(bool condition)
 	}
 }
 
-inline void CPU::SetInterrupt(bool condition)
+inline void NesCpu::SetInterrupt(bool condition)
 {
 	if (condition) {
 		m_p |= FLAG_INTERRUPT;
@@ -401,7 +401,7 @@ inline void CPU::SetInterrupt(bool condition)
 	}
 }
 
-inline void CPU::SetBreak(bool condition)
+inline void NesCpu::SetBreak(bool condition)
 {
 	if (condition) {
 		m_p |= FLAG_BREAK;
@@ -412,60 +412,60 @@ inline void CPU::SetBreak(bool condition)
 }
 
 // Primarily used for testing purposes.
-uint8_t CPU::GetA()
+uint8_t NesCpu::GetA()
 {
 	return m_a;
 }
 
-void CPU::SetA(uint8_t a)
+void NesCpu::SetA(uint8_t a)
 {
 	m_a = a;
 }
 
-uint8_t CPU::GetX()
+uint8_t NesCpu::GetX()
 {
 	return m_x;
 }
 
-void CPU::SetX(uint8_t x)
+void NesCpu::SetX(uint8_t x)
 {
 	m_x = x;
 }
 
-uint8_t CPU::GetY()
+uint8_t NesCpu::GetY()
 {
 	return m_y;
 }
 
-void CPU::SetY(uint8_t y)
+void NesCpu::SetY(uint8_t y)
 {
 	m_y = y;
 }
 
-bool CPU::GetFlag(uint8_t flag)
+bool NesCpu::GetFlag(uint8_t flag)
 {
 	return (m_p & flag) == flag;
 }
 
-void CPU::SetFlag(uint8_t flag)
+void NesCpu::SetFlag(uint8_t flag)
 {
 	m_p |= flag;
 }
 
-uint16_t CPU::GetPC() {
+uint16_t NesCpu::GetPC() {
 	return m_pc;
 }
 
-void CPU::SetPC(uint16_t address)
+void NesCpu::SetPC(uint16_t address)
 {
 	m_pc = address;
 }
 
-void CPU::ConsumeCycle() {
+void NesCpu::ConsumeCycle() {
 	m_cycle_count++;
 }
 
-void CPU::init_cpu() {
+void NesCpu::init_cpu() {
 	reset_line = false;
 	// Halt on invalid instructions.
 	for (int i = 0; i < 0x100; i++) {
@@ -665,159 +665,4 @@ void CPU::init_cpu() {
 
 	// Unnoficial op codes
 	opcode_table[0x04] = &run_instruction<Mode_ZeroPage, Op_NOP>;
-}
-
-void CPU::buildMap() {
-	instructionMap[0x69] = "ADC_IMMEDIATE";
-	instructionMap[0x65] = "ADC_ZEROPAGE";
-	instructionMap[0x75] = "ADC_ZEROPAGE_X";
-	instructionMap[0x6D] = "ADC_ABSOLUTE";
-	instructionMap[0x7D] = "ADC_ABSOLUTE_X";
-	instructionMap[0x79] = "ADC_ABSOLUTE_Y";
-	instructionMap[0x61] = "ADC_INDEXEDINDIRECT";
-	instructionMap[0x71] = "ADC_INDIRECTINDEXED";
-	instructionMap[0x29] = "AND_IMMEDIATE";
-	instructionMap[0x25] = "AND_ZEROPAGE";
-	instructionMap[0x35] = "AND_ZEROPAGE_X";
-	instructionMap[0x2D] = "AND_ABSOLUTE";
-	instructionMap[0x3D] = "AND_ABSOLUTE_X";
-	instructionMap[0x39] = "AND_ABSOLUTE_Y";
-	instructionMap[0x21] = "AND_INDEXEDINDIRECT";
-	instructionMap[0x31] = "AND_INDIRECTINDEXED";
-	instructionMap[0x0A] = "ASL_ACCUMULATOR";
-	instructionMap[0x06] = "ASL_ZEROPAGE";
-	instructionMap[0x16] = "ASL_ZEROPAGE_X";
-	instructionMap[0x0E] = "ASL_ABSOLUTE";
-	instructionMap[0x1E] = "ASL_ABSOLUTE_X";
-	instructionMap[0x90] = "BCC_RELATIVE";
-	instructionMap[0xB0] = "BCS_RELATIVE";
-	instructionMap[0xF0] = "BEQ_RELATIVE";
-	instructionMap[0x24] = "BIT_ZEROPAGE";
-	instructionMap[0x2C] = "BIT_ABSOLUTE";
-	instructionMap[0x30] = "BMI_RELATIVE";
-	instructionMap[0xD0] = "BNE_RELATIVE";
-	instructionMap[0x10] = "BPL_RELATIVE";
-	instructionMap[0x00] = "BRK_IMPLIED";
-	instructionMap[0x50] = "BVC_RELATIVE";
-	instructionMap[0x70] = "BVS_RELATIVE";
-	instructionMap[0x18] = "CLC_IMPLIED";
-	instructionMap[0xD8] = "CLD_IMPLIED";
-	instructionMap[0x58] = "CLI_IMPLIED";
-	instructionMap[0xB8] = "CLV_IMPLIED";
-	instructionMap[0xC9] = "CMP_IMMEDIATE";
-	instructionMap[0xC5] = "CMP_ZEROPAGE";
-	instructionMap[0xD5] = "CMP_ZEROPAGE_X";
-	instructionMap[0xCD] = "CMP_ABSOLUTE";
-	instructionMap[0xDD] = "CMP_ABSOLUTE_X";
-	instructionMap[0xD9] = "CMP_ABSOLUTE_Y";
-	instructionMap[0x69] = "ADC_IMMEDIATE";
-	instructionMap[0xC1] = "CMP_INDEXEDINDIRECT";
-	instructionMap[0xD1] = "CMP_INDIRECTINDEXED";
-	instructionMap[0xE0] = "CPX_IMMEDIATE";
-	instructionMap[0xE4] = "CPX_ZEROPAGE";
-	instructionMap[0xEC] = "CPX_ABSOLUTE";
-	instructionMap[0xC0] = "CPY_IMMEDIATE";
-	instructionMap[0xC4] = "CPY_ZEROPAGE";
-	instructionMap[0xCC] = "CPY_ABSOLUTE";
-	instructionMap[0xC6] = "DEC_ZEROPAGE";
-	instructionMap[0xD6] = "DEC_ZEROPAGE_X";
-	instructionMap[0xCE] = "DEC_ABSOLUTE";
-	instructionMap[0xDE] = "DEC_ABSOLUTE_X";
-	instructionMap[0xCA] = "DEX_IMPLIED";
-	instructionMap[0x88] = "DEY_IMPLIED";
-	instructionMap[0x49] = "EOR_IMMEDIATE";
-	instructionMap[0x45] = "EOR_ZEROPAGE";
-	instructionMap[0x55] = "EOR_ZEROPAGE_X";
-	instructionMap[0x4D] = "EOR_ABSOLUTE";
-	instructionMap[0x5D] = "EOR_ABSOLUTE_X";
-	instructionMap[0x59] = "EOR_ABSOLUTE_Y";
-	instructionMap[0x41] = "EOR_INDEXEDINDIRECT";
-	instructionMap[0x51] = "EOR_INDIRECTINDEXED";
-	instructionMap[0xE6] = "INC_ZEROPAGE";
-	instructionMap[0xF6] = "INC_ZEROPAGE_X";
-	instructionMap[0xEE] = "INC_ABSOLUTE";
-	instructionMap[0xFE] = "INC_ABSOLUTE_X";
-	instructionMap[0xE8] = "INX_IMPLIED";
-	instructionMap[0xC8] = "INY_IMPLIED";
-	instructionMap[0x4C] = "JMP_ABSOLUTE";
-	instructionMap[0x6C] = "JMP_INDIRECT";
-	instructionMap[0x20] = "JSR_ABSOLUTE";
-	instructionMap[0xA9] = "LDA_IMMEDIATE";
-	instructionMap[0xA5] = "LDA_ZEROPAGE";
-	instructionMap[0xB5] = "LDA_ZEROPAGE_X";
-	instructionMap[0xAD] = "LDA_ABSOLUTE";
-	instructionMap[0xBD] = "LDA_ABSOLUTE_X";
-	instructionMap[0xB9] = "LDA_ABSOLUTE_Y";
-	instructionMap[0xA1] = "LDA_INDEXEDINDIRECT";
-	instructionMap[0xB1] = "LDA_INDIRECTINDEXED";
-	instructionMap[0xA2] = "LDX_IMMEDIATE";
-	instructionMap[0xA6] = "LDX_ZEROPAGE";
-	instructionMap[0xB6] = "LDX_ZEROPAGE_Y";
-	instructionMap[0xAE] = "LDX_ABSOLUTE";
-	instructionMap[0xBE] = "LDX_ABSOLUTE_Y";
-	instructionMap[0xA0] = "LDY_IMMEDIATE";
-	instructionMap[0xA4] = "LDY_ZEROPAGE";
-	instructionMap[0xB4] = "LDY_ZEROPAGE_X";
-	instructionMap[0xAC] = "LDY_ABSOLUTE";
-	instructionMap[0xBC] = "LDY_ABSOLUTE_X";
-	instructionMap[0x4A] = "LSR_ACCUMULATOR";
-	instructionMap[0x46] = "LSR_ZEROPAGE";
-	instructionMap[0x56] = "LSR_ZEROPAGE_X";
-	instructionMap[0x4E] = "LSR_ABSOLUTE";
-	instructionMap[0x5E] = "LSR_ABSOLUTE_X";
-	instructionMap[0xEA] = "NOP_IMPLIED";
-	instructionMap[0x09] = "ORA_IMMEDIATE";
-	instructionMap[0x05] = "ORA_ZEROPAGE";
-	instructionMap[0x15] = "ORA_ZEROPAGE_X";
-	instructionMap[0x0D] = "ORA_ABSOLUTE";
-	instructionMap[0x1D] = "ORA_ABSOLUTE_X";
-	instructionMap[0x19] = "ORA_ABSOLUTE_Y";
-	instructionMap[0x01] = "ORA_INDEXEDINDIRECT";
-	instructionMap[0x11] = "ORA_INDIRECTINDEXED";
-	instructionMap[0x48] = "PHA_IMPLIED";
-	instructionMap[0x08] = "PHP_IMPLIED";
-	instructionMap[0x68] = "PLA_IMPLIED";
-	instructionMap[0x28] = "PLP_IMPLIED";
-	instructionMap[0x2A] = "ROL_ACCUMULATOR";
-	instructionMap[0x26] = "ROL_ZEROPAGE";
-	instructionMap[0x36] = "ROL_ZEROPAGE_X";
-	instructionMap[0x2E] = "ROL_ABSOLUTE";
-	instructionMap[0x3E] = "ROL_ABSOLUTE_X";
-	instructionMap[0x6A] = "ROR_ACCUMULATOR";
-	instructionMap[0x66] = "ROR_ZEROPAGE";
-	instructionMap[0x76] = "ROR_ZEROPAGE_X";
-	instructionMap[0x6E] = "ROR_ABSOLUTE";
-	instructionMap[0x7E] = "ROR_ABSOLUTE_X";
-	instructionMap[0x40] = "RTI_IMPLIED";
-	instructionMap[0x60] = "RTS_IMPLIED";
-	instructionMap[0xE9] = "SBC_IMMEDIATE";
-	instructionMap[0xE5] = "SBC_ZEROPAGE";
-	instructionMap[0xF5] = "SBC_ZEROPAGE_X";
-	instructionMap[0xED] = "SBC_ABSOLUTE";
-	instructionMap[0xFD] = "SBC_ABSOLUTE_X";
-	instructionMap[0xF9] = "SBC_ABSOLUTE_Y";
-	instructionMap[0xE1] = "SBC_INDEXEDINDIRECT";
-	instructionMap[0xF1] = "SBC_INDIRECTINDEXED";
-	instructionMap[0x38] = "SEC_IMPLIED";
-	instructionMap[0xF8] = "SED_IMPLIED";
-	instructionMap[0x78] = "SEI_IMPLIED";
-	instructionMap[0x85] = "STA_ZEROPAGE";
-	instructionMap[0x95] = "STA_ZEROPAGE_X";
-	instructionMap[0x8D] = "STA_ABSOLUTE";
-	instructionMap[0x9D] = "STA_ABSOLUTE_X";
-	instructionMap[0x99] = "STA_ABSOLUTE_Y";
-	instructionMap[0x81] = "STA_INDEXEDINDIRECT";
-	instructionMap[0x91] = "STA_INDIRECTINDEXED";
-	instructionMap[0x86] = "STX_ZEROPAGE";
-	instructionMap[0x96] = "STX_ZEROPAGE_Y";
-	instructionMap[0x8E] = "STX_ABSOLUTE";
-	instructionMap[0x84] = "STY_ZEROPAGE";
-	instructionMap[0x94] = "STY_ZEROPAGE_X";
-	instructionMap[0x8C] = "STY_ABSOLUTE";
-	instructionMap[0xAA] = "TAX_IMPLIED";
-	instructionMap[0xA8] = "TAY_IMPLIED";
-	instructionMap[0xBA] = "TSX_IMPLIED";
-	instructionMap[0x8A] = "TXA_IMPLIED";
-	instructionMap[0x9A] = "TXS_IMPLIED";
-	instructionMap[0x98] = "TYA_IMPLIED";
 }

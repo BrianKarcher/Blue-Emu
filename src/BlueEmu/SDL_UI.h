@@ -9,7 +9,7 @@
 #include <array>
 #include "bus.h"
 #include "PPU.h"
-#include "CPU.h"
+#include "NesCpu.h"
 #include "APU.h"
 #include "Input.h"
 #include "PPUViewer.h"

@@ -1,5 +1,5 @@
 #include "MMC3.h"
-#include "CPU.h"
+#include "NesCpu.h"
 #include "Cartridge.h"
 #include "Bus.h"
 #include "PPU.h"

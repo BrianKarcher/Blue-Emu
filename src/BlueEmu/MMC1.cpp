@@ -3,9 +3,9 @@
 #include <Windows.h>
 #include <string>
 #include <bitset>
-#include "CPU.h"
+#include "NesCpu.h"
 
-MMC1::MMC1(Cartridge* cartridge, CPU& c) : cpu(c) {
+MMC1::MMC1(Cartridge* cartridge, NesCpu& c) : cpu(c) {
 	MapperBase::SetPrgPageSize(0x4000);
 	MapperBase::SetChrPageSize(0x1000);
 	// We use the 1 bit to track when the register is full, instead of a separate counter.

@@ -30,169 +30,16 @@ class DebuggerContext;
 #define FLAG_OVERFLOW  0x40
 #define FLAG_NEGATIVE  0x80
 
-// op codes
-const uint8_t ADC_IMMEDIATE = 0x69;
-const uint8_t ADC_ZEROPAGE = 0x65;
-const uint8_t ADC_ZEROPAGE_X = 0x75;
-const uint8_t ADC_ABSOLUTE = 0x6D;
-const uint8_t ADC_ABSOLUTE_X = 0x7D;
-const uint8_t ADC_ABSOLUTE_Y = 0x79;
-const uint8_t ADC_INDEXEDINDIRECT = 0x61;
-const uint8_t ADC_INDIRECTINDEXED = 0x71;
-const uint8_t AND_IMMEDIATE = 0x29;
-const uint8_t AND_ZEROPAGE = 0x25;
-const uint8_t AND_ZEROPAGE_X = 0x35;
-const uint8_t AND_ABSOLUTE = 0x2D;
-const uint8_t AND_ABSOLUTE_X = 0x3D;
-const uint8_t AND_ABSOLUTE_Y = 0x39;
-const uint8_t AND_INDEXEDINDIRECT = 0x21;
-const uint8_t AND_INDIRECTINDEXED = 0x31;
-const uint8_t ASL_ACCUMULATOR = 0x0A;
-const uint8_t ASL_ZEROPAGE = 0x06;
-const uint8_t ASL_ZEROPAGE_X = 0x16;
-const uint8_t ASL_ABSOLUTE = 0x0E;
-const uint8_t ASL_ABSOLUTE_X = 0x1E;
-const uint8_t BCC_RELATIVE = 0x90;
-const uint8_t BCS_RELATIVE = 0xB0;
-const uint8_t BEQ_RELATIVE = 0xF0;
-const uint8_t BIT_ZEROPAGE = 0x24;
-const uint8_t BIT_ABSOLUTE = 0x2C;
-const uint8_t BMI_RELATIVE = 0x30;
-const uint8_t BNE_RELATIVE = 0xD0;
-const uint8_t BPL_RELATIVE = 0x10;
-const uint8_t BRK_IMPLIED = 0x00;
-const uint8_t BVC_RELATIVE = 0x50;
-const uint8_t BVS_RELATIVE = 0x70;
-const uint8_t CLC_IMPLIED = 0x18;
-const uint8_t CLD_IMPLIED = 0xD8;
-const uint8_t CLI_IMPLIED = 0x58;
-const uint8_t CLV_IMPLIED = 0xB8;
-const uint8_t CMP_IMMEDIATE = 0xC9;
-const uint8_t CMP_ZEROPAGE = 0xC5;
-const uint8_t CMP_ZEROPAGE_X = 0xD5;
-const uint8_t CMP_ABSOLUTE = 0xCD;
-const uint8_t CMP_ABSOLUTE_X = 0xDD;
-const uint8_t CMP_ABSOLUTE_Y = 0xD9;
-const uint8_t CMP_INDEXEDINDIRECT = 0xC1;
-const uint8_t CMP_INDIRECTINDEXED = 0xD1;
-const uint8_t CPX_IMMEDIATE = 0xE0;
-const uint8_t CPX_ZEROPAGE = 0xE4;
-const uint8_t CPX_ABSOLUTE = 0xEC;
-const uint8_t CPY_IMMEDIATE = 0xC0;
-const uint8_t CPY_ZEROPAGE = 0xC4;
-const uint8_t CPY_ABSOLUTE = 0xCC;
-const uint8_t DEC_ZEROPAGE = 0xC6;
-const uint8_t DEC_ZEROPAGE_X = 0xD6;
-const uint8_t DEC_ABSOLUTE = 0xCE;
-const uint8_t DEC_ABSOLUTE_X = 0xDE;
-const uint8_t DEX_IMPLIED = 0xCA;
-const uint8_t DEY_IMPLIED = 0x88;
-const uint8_t EOR_IMMEDIATE = 0x49;
-const uint8_t EOR_ZEROPAGE = 0x45;
-const uint8_t EOR_ZEROPAGE_X = 0x55;
-const uint8_t EOR_ABSOLUTE = 0x4D;
-const uint8_t EOR_ABSOLUTE_X = 0x5D;
-const uint8_t EOR_ABSOLUTE_Y = 0x59;
-const uint8_t EOR_INDEXEDINDIRECT = 0x41;
-const uint8_t EOR_INDIRECTINDEXED = 0x51;
-const uint8_t INC_ZEROPAGE = 0xE6;
-const uint8_t INC_ZEROPAGE_X = 0xF6;
-const uint8_t INC_ABSOLUTE = 0xEE;
-const uint8_t INC_ABSOLUTE_X = 0xFE;
-const uint8_t INX_IMPLIED = 0xE8;
-const uint8_t INY_IMPLIED = 0xC8;
-const uint8_t JMP_ABSOLUTE = 0x4C;
-const uint8_t JMP_INDIRECT = 0x6C;
-const uint8_t JSR_ABSOLUTE = 0x20;
-const uint8_t LDA_IMMEDIATE = 0xA9;
-const uint8_t LDA_ZEROPAGE = 0xA5;
-const uint8_t LDA_ZEROPAGE_X = 0xB5;
-const uint8_t LDA_ABSOLUTE = 0xAD;
-const uint8_t LDA_ABSOLUTE_X = 0xBD;
-const uint8_t LDA_ABSOLUTE_Y = 0xB9;
-const uint8_t LDA_INDEXEDINDIRECT = 0xA1;
-const uint8_t LDA_INDIRECTINDEXED = 0xB1;
-const uint8_t LDX_IMMEDIATE = 0xA2;
-const uint8_t LDX_ZEROPAGE = 0xA6;
-const uint8_t LDX_ZEROPAGE_Y = 0xB6;
-const uint8_t LDX_ABSOLUTE = 0xAE;
-const uint8_t LDX_ABSOLUTE_Y = 0xBE;
-const uint8_t LDY_IMMEDIATE = 0xA0;
-const uint8_t LDY_ZEROPAGE = 0xA4;
-const uint8_t LDY_ZEROPAGE_X = 0xB4;
-const uint8_t LDY_ABSOLUTE = 0xAC;
-const uint8_t LDY_ABSOLUTE_X = 0xBC;
-const uint8_t LSR_ACCUMULATOR = 0x4A;
-const uint8_t LSR_ZEROPAGE = 0x46;
-const uint8_t LSR_ZEROPAGE_X = 0x56;
-const uint8_t LSR_ABSOLUTE = 0x4E;
-const uint8_t LSR_ABSOLUTE_X = 0x5E;
-const uint8_t NOP_IMPLIED = 0xEA;
-const uint8_t ORA_IMMEDIATE = 0x09;
-const uint8_t ORA_ZEROPAGE = 0x05;
-const uint8_t ORA_ZEROPAGE_X = 0x15;
-const uint8_t ORA_ABSOLUTE = 0x0D;
-const uint8_t ORA_ABSOLUTE_X = 0x1D;
-const uint8_t ORA_ABSOLUTE_Y = 0x19;
-const uint8_t ORA_INDEXEDINDIRECT = 0x01;
-const uint8_t ORA_INDIRECTINDEXED = 0x11;
-const uint8_t PHA_IMPLIED = 0x48;
-const uint8_t PHP_IMPLIED = 0x08;
-const uint8_t PLA_IMPLIED = 0x68;
-const uint8_t PLP_IMPLIED = 0x28;
-const uint8_t ROL_ACCUMULATOR = 0x2A;
-const uint8_t ROL_ZEROPAGE = 0x26;
-const uint8_t ROL_ZEROPAGE_X = 0x36;
-const uint8_t ROL_ABSOLUTE = 0x2E;
-const uint8_t ROL_ABSOLUTE_X = 0x3E;
-const uint8_t ROR_ACCUMULATOR = 0x6A;
-const uint8_t ROR_ZEROPAGE = 0x66;
-const uint8_t ROR_ZEROPAGE_X = 0x76;
-const uint8_t ROR_ABSOLUTE = 0x6E;
-const uint8_t ROR_ABSOLUTE_X = 0x7E;
-const uint8_t RTI_IMPLIED = 0x40;
-const uint8_t RTS_IMPLIED = 0x60;
-const uint8_t SBC_IMMEDIATE = 0xE9;
-const uint8_t SBC_ZEROPAGE = 0xE5;
-const uint8_t SBC_ZEROPAGE_X = 0xF5;
-const uint8_t SBC_ABSOLUTE = 0xED;
-const uint8_t SBC_ABSOLUTE_X = 0xFD;
-const uint8_t SBC_ABSOLUTE_Y = 0xF9;
-const uint8_t SBC_INDEXEDINDIRECT = 0xE1;
-const uint8_t SBC_INDIRECTINDEXED = 0xF1;
-const uint8_t SEC_IMPLIED = 0x38;
-const uint8_t SED_IMPLIED = 0xF8;
-const uint8_t SEI_IMPLIED = 0x78;
-const uint8_t STA_ZEROPAGE = 0x85;
-const uint8_t STA_ZEROPAGE_X = 0x95;
-const uint8_t STA_ABSOLUTE = 0x8D;
-const uint8_t STA_ABSOLUTE_X = 0x9D;
-const uint8_t STA_ABSOLUTE_Y = 0x99;
-const uint8_t STA_INDEXEDINDIRECT = 0x81;
-const uint8_t STA_INDIRECTINDEXED = 0x91;
-const uint8_t STX_ZEROPAGE = 0x86;
-const uint8_t STX_ZEROPAGE_Y = 0x96;
-const uint8_t STX_ABSOLUTE = 0x8E;
-const uint8_t STY_ZEROPAGE = 0x84;
-const uint8_t STY_ZEROPAGE_X = 0x94;
-const uint8_t STY_ABSOLUTE = 0x8C;
-const uint8_t TAX_IMPLIED = 0xAA;
-const uint8_t TAY_IMPLIED = 0xA8;
-const uint8_t TSX_IMPLIED = 0xBA;
-const uint8_t TXA_IMPLIED = 0x8A;
-const uint8_t TXS_IMPLIED = 0x9A;
-const uint8_t TYA_IMPLIED = 0x98;
-
 class Bus;
 class OpenBusMapper;
 class Serializer;
 class SharedContext;
 class PPU;
 
-class CPU
+class NesCpu
 {
 public:
-	CPU(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg, PPU& ppu);
+	NesCpu(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg, PPU& ppu);
 	void connectBus(Bus* bus);
 
 	bool ShouldPause();
@@ -227,7 +74,6 @@ public:
 	uint8_t GetSP();
 	void SetSP(uint8_t sp);
 	int cyclesThisFrame;
-	std::array<std::string, 256> instructionMap;
 	void setFrozen(bool frozen) { isFrozen = frozen; }
 	void toggleFrozen() { isFrozen = !isFrozen; }
 	void ConsumeCycle();
@@ -278,7 +124,7 @@ private:
 	// to access the bus and complete the cycle.
 
 	struct Mode_Immediate {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1:
 				cpu.effective_addr = cpu.m_pc++;
@@ -293,7 +139,7 @@ private:
 	// Policy: Implied Addressing Mode
 	// Usage: CLC, PHA, INX, etc.
 	struct Mode_Implied {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// No address to fetch.
 			// Return true so the Op runs in the cycle immediately following the fetch.
 			return true;
@@ -303,7 +149,7 @@ private:
 	// Policy: Zero Page (e.g., LDA $nn)
 	// Cycles: 3 total (T0: Opcode, T1: Fetch Address, T2: Read/Write)
 	struct Mode_ZeroPage {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Fetch the 8-bit address
 				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
@@ -324,7 +170,7 @@ private:
 	// Policy: Zero Page, X (e.g., LDA $nn, X)
 	// Cycles: 4 total (T0: Opcode, T1: Fetch Addr, T2: Add X/Dummy Read, T3: Read/Write)
 	struct Mode_ZeroPageX {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 				case 1: // T1: Fetch the base 8-bit address
 					cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
@@ -352,7 +198,7 @@ private:
 	// Policy: Zero Page, Y (e.g., LDA $nn, Y)
 	// Cycles: 4 total (T0: Opcode, T1: Fetch Addr, T2: Add Y/Dummy Read, T3: Read/Write)
 	struct Mode_ZeroPageY {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Fetch the base 8-bit address
 				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
@@ -380,7 +226,7 @@ private:
 	// Policy: Absolute Addressing Mode ($aaaa)
 	// Usage: LDA $1234, STA $4000, etc.
 	struct Mode_Absolute {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Fetch Low Byte of Address
 				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
@@ -409,7 +255,7 @@ private:
 	template <bool always_penalty>
 	struct Mode_AbsoluteX {
 		// Returns true when the addressing sequence is totally finished
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // Fetch Low
 				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
@@ -460,7 +306,7 @@ private:
 	template <bool always_penalty>
 	struct Mode_AbsoluteY {
 		// Returns true when the addressing sequence is totally finished
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // Fetch Low
 				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
@@ -510,7 +356,7 @@ private:
 	// Usage: LDA ($nn, X)
 	// This mode is always a fixed length (6 cycles total).
 	struct Mode_IndirectX {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 				case 1: // Fetch Zero Page Base Address
 					// Read the immediate byte (base address in ZP)
@@ -559,7 +405,7 @@ private:
 	template <bool always_penalty>
 	struct Mode_IndirectY {
 		// Returns true when the addressing sequence is totally finished
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // Fetch Pointer Address (from Zero Page)
 				// We temporarily use effective_addr to hold the ZP pointer address
@@ -624,7 +470,7 @@ private:
 	struct Op_RMW {
 		static constexpr bool is_write = true;
 
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 0: // Read
 				cpu._operand = cpu.ReadByte(cpu.effective_addr);
@@ -651,11 +497,11 @@ private:
 	struct Op_ADC {
 		static constexpr bool is_rmw = false;
 
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			return step(cpu, cpu.ReadByte(cpu.effective_addr));
 		}
 		
-		static bool step(CPU& cpu, uint8_t operand) {
+		static bool step(NesCpu& cpu, uint8_t operand) {
 			uint8_t a_old = cpu.m_a;
 
 			uint16_t result = cpu.m_a + operand + (cpu.m_p & FLAG_CARRY ? 1 : 0);
@@ -699,7 +545,7 @@ private:
 	};
 
 	struct Op_AND {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// AND operation with the accumulator
 			cpu.m_a &= cpu.ReadByte(cpu.effective_addr);
 			cpu.update_ZN_flags(cpu.m_a);
@@ -712,14 +558,14 @@ private:
 		static constexpr bool is_rmw = true;
 
 		// This version is called for ASL A (Accumulator Mode)
-		static bool step_acc(CPU& cpu) {
+		static bool step_acc(NesCpu& cpu) {
 			Logic_ASL::execute(cpu, cpu.m_a);
 			return true; // Complete in 2 cycles total
 		}
 	};
 
 	struct Logic_ASL {
-		static void execute(CPU& cpu, uint8_t& val) {
+		static void execute(NesCpu& cpu, uint8_t& val) {
 			if (val & 0x80) cpu.SetFlag(FLAG_CARRY);
 			else cpu.ClearFlag(FLAG_CARRY);
 
@@ -729,7 +575,7 @@ private:
 	};
 
 	struct Op_BCC {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1:
 			{
@@ -781,7 +627,7 @@ private:
 	};
 
 	struct Op_BCS {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1:
 			{
@@ -833,7 +679,7 @@ private:
 	};
 
 	struct Op_BEQ {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1:
 			{
@@ -888,7 +734,7 @@ private:
 		// Standard read-only operation
 		static constexpr bool is_write = false;
 
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Addressing mode has already set cpu.effective_addr
 			uint8_t mem_val = cpu.ReadByte(cpu.effective_addr);
 
@@ -909,7 +755,7 @@ private:
 	};
 
 	struct Op_BMI {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1:
 			{
@@ -961,7 +807,7 @@ private:
 	};
 
 	struct Op_BNE {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1:
 			{
@@ -1013,7 +859,7 @@ private:
 	};
 
 	struct Op_BPL {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1:
 			{
@@ -1065,7 +911,7 @@ private:
 	};
 
 	struct Op_BRK {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Dummy Fetch
 				// The 6502 fetches the byte after BRK and ignores it
@@ -1125,7 +971,7 @@ private:
 	};
 
 	struct Op_BVC {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1:
 			{
@@ -1177,7 +1023,7 @@ private:
 	};
 
 	struct Op_BVS {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1:
 			{
@@ -1229,7 +1075,7 @@ private:
 	};
 
 	struct Op_CLC {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			// T1: Clear the Carry Flag
@@ -1240,7 +1086,7 @@ private:
 	};
 
 	struct Op_CLD {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			cpu.ClearFlag(FLAG_DECIMAL);
@@ -1249,7 +1095,7 @@ private:
 	};
 
 	struct Op_CLI {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			cpu.ClearFlag(FLAG_INTERRUPT);
@@ -1258,7 +1104,7 @@ private:
 	};
 
 	struct Op_CLV {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			cpu.ClearFlag(FLAG_OVERFLOW);
@@ -1270,7 +1116,7 @@ private:
 		// Defines that this is a Read operation (allows page-cross optimization)
 		static constexpr bool is_rmw = false;
 
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// This runs once the Addressing Mode has set cpu.effective_addr
 			uint8_t val = cpu.ReadByte(cpu.effective_addr);
 
@@ -1289,7 +1135,7 @@ private:
 
 	struct Op_CPX {
 		static constexpr bool is_rmw = false;
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			uint8_t val = cpu.ReadByte(cpu.effective_addr);
 			if (cpu.m_x >= val) cpu.SetFlag(FLAG_CARRY);
 			else cpu.ClearFlag(FLAG_CARRY);
@@ -1300,7 +1146,7 @@ private:
 
 	struct Op_CPY {
 		static constexpr bool is_rmw = false;
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			uint8_t val = cpu.ReadByte(cpu.effective_addr);
 			if (cpu.m_y >= val) cpu.SetFlag(FLAG_CARRY);
 			else cpu.ClearFlag(FLAG_CARRY);
@@ -1310,14 +1156,14 @@ private:
 	};
 
 	struct Logic_DEC {
-		static void execute(CPU& cpu, uint8_t& val) {
+		static void execute(NesCpu& cpu, uint8_t& val) {
 			val--;
 			cpu.update_ZN_flags(val);
 		}
 	};
 
 	struct Op_DEX {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// T1: Internal Operation
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
@@ -1331,7 +1177,7 @@ private:
 	};
 
 	struct Op_DEY {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// T1: Internal Operation
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
@@ -1348,7 +1194,7 @@ private:
 		// Allows page-cross optimization (Read operation)
 		static constexpr bool is_write = false;
 
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Fetch the value from the address prepared by the Mode
 			uint8_t val = cpu.ReadByte(cpu.effective_addr);
 
@@ -1363,7 +1209,7 @@ private:
 	};
 
 	struct Op_HardwareInterrupt_NMI {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Another Dummy Read (The 6502 is quirky like this)
 				cpu.ReadByte(cpu.m_pc);
@@ -1404,7 +1250,7 @@ private:
 	};
 
 	struct Op_HardwareInterrupt_IRQ {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Another Dummy Read (The 6502 is quirky like this)
 				cpu.ReadByte(cpu.m_pc);
@@ -1457,7 +1303,7 @@ private:
 	};
 
 	struct Op_HardwareReset {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Initial dummy read
 				cpu.ReadByte(cpu.m_pc);
@@ -1507,7 +1353,7 @@ private:
 	};
 
 	struct Op_HLT {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			cpu.m_pc -= 1; // Stay on this instruction
 			return true;
 		}
@@ -1515,14 +1361,14 @@ private:
 	};
 
 	struct Logic_INC {
-		static void execute(CPU& cpu, uint8_t& val) {
+		static void execute(NesCpu& cpu, uint8_t& val) {
 			val++;
 			cpu.update_ZN_flags(val);
 		}
 	};
 
 	struct Op_INX {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Cycle T1: Internal Operation
 			// Dummy pc fetch
 			cpu.ReadByte(cpu.m_pc);
@@ -1534,7 +1380,7 @@ private:
 	};
 
 	struct Op_INY {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy pc fetch
 			cpu.ReadByte(cpu.m_pc);
 			cpu.m_y++;
@@ -1544,7 +1390,7 @@ private:
 	};
 
 	struct Op_JMP_Absolute {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Fetch Low Byte
 				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
@@ -1563,7 +1409,7 @@ private:
 	};
 
 	struct Op_JMP_Indirect {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Fetch Pointer Low
 				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
@@ -1607,7 +1453,7 @@ private:
 	};
 
 	struct Op_JSR {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Fetch Low Byte of destination
 				cpu.addr_low = cpu.ReadByte(cpu.m_pc++);
@@ -1645,7 +1491,7 @@ private:
 	};
 
 	struct Op_LDA {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			cpu.m_a = cpu.ReadByte(cpu.effective_addr);
 			cpu.update_ZN_flags(cpu.m_a);
 			return true;
@@ -1654,7 +1500,7 @@ private:
 	};
 
 	struct Op_LDX {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			cpu.m_x = cpu.ReadByte(cpu.effective_addr);
 			cpu.update_ZN_flags(cpu.m_x);
 			return true;
@@ -1663,7 +1509,7 @@ private:
 	};
 
 	struct Op_LDY {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			cpu.m_y = cpu.ReadByte(cpu.effective_addr);
 			cpu.update_ZN_flags(cpu.m_y);
 			return true;
@@ -1672,14 +1518,14 @@ private:
 	};
 
 	struct Op_LSR_Accumulator {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			Logic_LSR::execute(cpu, cpu.m_a);
 			return true;
 		}
 	};
 
 	struct Logic_LSR {
-		static void execute(CPU& cpu, uint8_t& val) {
+		static void execute(NesCpu& cpu, uint8_t& val) {
 			if (val & 0x01) cpu.SetFlag(FLAG_CARRY);
 			else cpu.ClearFlag(FLAG_CARRY);
 			val >>= 1;
@@ -1688,7 +1534,7 @@ private:
 	};
 
 	struct Op_NOP {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// T1: Internal Operation
 			// The 6502 performs a dummy read of the next byte after the opcode 
 			// and ignores it. No registers or flags are modified.
@@ -1701,7 +1547,7 @@ private:
 		// Allows page-cross optimization (Read operation)
 		static constexpr bool is_rmw = false;
 
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Fetch the value from the address prepared by the Mode
 			uint8_t val = cpu.ReadByte(cpu.effective_addr);
 
@@ -1716,7 +1562,7 @@ private:
 	};
 
 	struct Op_PHA {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Dummy Read
 				// Hardware quirk: reads the next byte (PC) but ignores it
@@ -1736,7 +1582,7 @@ private:
 	};
 
 	struct Op_PHP {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Dummy Read
 				// Hardware quirk: reads the next byte (PC) but ignores it
@@ -1756,7 +1602,7 @@ private:
 	};
 
 	struct Op_PLA {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Dummy Read
 				// Hardware reads the opcode address again (internal sync)
@@ -1786,7 +1632,7 @@ private:
 	};
 
 	struct Op_PLP {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Dummy Read
 				cpu.ReadByte(cpu.m_pc);
@@ -1811,14 +1657,14 @@ private:
 	};
 
 	struct Op_ROL_Accumulator {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			Logic_ROL::execute(cpu, cpu.m_a);
 			return true;
 		}
 	};
 
 	struct Logic_ROL {
-		static void execute(CPU& cpu, uint8_t& val) {
+		static void execute(NesCpu& cpu, uint8_t& val) {
 			uint8_t old_carry = cpu.GetFlag(FLAG_CARRY) ? 1 : 0;
 
 			// Set new Carry from old Bit 7
@@ -1833,14 +1679,14 @@ private:
 	};
 
 	struct Op_ROR_Accumulator {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			Logic_ROR::execute(cpu, cpu.m_a);
 			return true;
 		}
 	};
 
 	struct Logic_ROR {
-		static void execute(CPU& cpu, uint8_t& val) {
+		static void execute(NesCpu& cpu, uint8_t& val) {
 			// 1. Capture the OLD Carry bit (0 or 1)
 			uint8_t old_carry = cpu.GetFlag(FLAG_CARRY) ? 1 : 0;
 
@@ -1857,7 +1703,7 @@ private:
 	};
 
 	struct Op_RTI {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Dummy Read
 				// The 6502 performs a dummy read of the opcode byte (or stack)
@@ -1901,7 +1747,7 @@ private:
 	};
 
 	struct Op_RTS {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			switch (cpu.cycle_state) {
 			case 1: // T1: Dummy Read
 				// The 6502 performs a dummy read of the opcode byte (internal processing)
@@ -1940,7 +1786,7 @@ private:
 	};
 
 	struct Op_SBC {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Invert the operand for subtraction
 			return Op_ADC::step(cpu, ~cpu.ReadByte(cpu.effective_addr));
 		}
@@ -1948,7 +1794,7 @@ private:
 	};
 
 	struct Op_SEC {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			// T1: Clear the Carry Flag
@@ -1959,7 +1805,7 @@ private:
 	};
 
 	struct Op_SED {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			// T1: Clear the Carry Flag
@@ -1970,7 +1816,7 @@ private:
 	};
 
 	struct Op_SEI {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			// T1: Clear the Carry Flag
@@ -1981,7 +1827,7 @@ private:
 	};
 
 	struct Op_STA {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			cpu.WriteByte(cpu.effective_addr, cpu.m_a);
 			return true;
 		}
@@ -1989,7 +1835,7 @@ private:
 	};
 
 	struct Op_STX {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			cpu.WriteByte(cpu.effective_addr, cpu.m_x);
 			return true;
 		}
@@ -1997,7 +1843,7 @@ private:
 	};
 
 	struct Op_STY {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			cpu.WriteByte(cpu.effective_addr, cpu.m_y);
 			return true;
 		}
@@ -2005,7 +1851,7 @@ private:
 	};
 
 	struct Op_TAX {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			// T1: Internal Operation
@@ -2020,7 +1866,7 @@ private:
 	};
 
 	struct Op_TAY {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			// T1: Internal Operation
@@ -2035,7 +1881,7 @@ private:
 	};
 
 	struct Op_TSX {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			// T1: Internal Operation
@@ -2050,7 +1896,7 @@ private:
 	};
 
 	struct Op_TXA {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			// T1: Internal Operation
@@ -2065,7 +1911,7 @@ private:
 	};
 
 	struct Op_TXS {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			// T1: Internal Operation
@@ -2077,7 +1923,7 @@ private:
 	};
 
 	struct Op_TYA {
-		static bool step(CPU& cpu) {
+		static bool step(NesCpu& cpu) {
 			// Dummy read
 			cpu.ReadByte(cpu.m_pc);
 			// T1: Internal Operation
@@ -2092,7 +1938,7 @@ private:
 	};
 
 	template <typename Op>
-	static void run_accumulator_instruction(CPU& cpu) {
+	static void run_accumulator_instruction(NesCpu& cpu) {
 		// Accumulator instructions are always 2 cycles.
 		// T0 was the fetch. T1 is the execution.
 		if (Op::step_acc(cpu)) {
@@ -2103,7 +1949,7 @@ private:
 	}
 
 	template <typename Op>
-	static void run_standalone_instruction(CPU& cpu) {
+	static void run_standalone_instruction(NesCpu& cpu) {
 		// Branches don't have a standard Effective Address mode, addressing is done in the branch logic
 		if (Op::step(cpu)) {
 			cpu.inst_complete = true;
@@ -2113,7 +1959,7 @@ private:
 	}
 
 	template <typename Mode, typename Op>
-	static void run_instruction(CPU& cpu) {
+	static void run_instruction(NesCpu& cpu) {
 		// 1. Run the Addressing Mode logic
 		if (!cpu.addr_complete) {
 			// Run Addressing Mode logic
@@ -2140,10 +1986,10 @@ private:
 	}
 
 	// Define a function pointer type for our micro-op handlers
-	typedef void (*InstructionHandler)(CPU&);
+	typedef void (*InstructionHandler)(NesCpu&);
 
 	// The Lookup Table
-	InstructionHandler opcode_table[258];
+	InstructionHandler opcode_table[259];
 
 	OpenBusMapper& openBus;
 	DebuggerContext& dbgCtx;

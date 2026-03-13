@@ -6,7 +6,7 @@
 #include "MapperBase.h"
 #include "MMC1.h"
 #include "MMC3.h"
-#include "CPU.h"
+#include "NesCpu.h"
 #include <Windows.h>
 #include <filesystem>
 #include <fstream>
@@ -72,7 +72,7 @@ std::vector<uint8_t> Cartridge::ReadNesFromZip(const std::string& zipPath) {
     return buffer;
 }
 
-Cartridge::Cartridge(SharedContext& ctx, CPU& c) : cpu(c), ctx(ctx) {
+Cartridge::Cartridge(SharedContext& ctx, NesCpu& c) : cpu(c), ctx(ctx) {
 	m_isLoaded = false;
 }
 

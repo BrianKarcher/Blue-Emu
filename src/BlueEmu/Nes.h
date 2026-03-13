@@ -12,7 +12,7 @@ const int TARGET_SAMPLES_PER_FRAME = 735; // 44100 / 60 = 735 samples per frame
 class Bus;
 class PPU;
 class Cartridge;
-class CPU;
+class NesCpu;
 class APU;
 class Input;
 class SharedContext;
@@ -29,7 +29,7 @@ public:
 	Bus& bus() { return *bus_; }
 	PPU& ppu() { return *ppu_; }
 	Cartridge& cart() { return *cart_; }
-	CPU& cpu() { return *cpu_; }
+	NesCpu& cpu() { return *cpu_; }
 	APU& apu() { return *apu_; }
 	Input& input() { return *input_; }
 	SharedContext& context() { return *context_; }
@@ -57,7 +57,7 @@ public:
 	Bus* bus_;
 	PPU* ppu_;
 	Cartridge* cart_;
-	CPU* cpu_;
+	NesCpu* cpu_;
 	APU* apu_;
 	Input* input_;
 	SharedContext* context_;

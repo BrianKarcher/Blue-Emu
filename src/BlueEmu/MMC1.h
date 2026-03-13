@@ -23,12 +23,12 @@ enum BoardType {
 };
 
 class Cartridge;
-class CPU;
+class NesCpu;
 
 class MMC1 : public MapperBase
 {
 public:
-	MMC1(Cartridge* cartridge, CPU& cpu);
+	MMC1(Cartridge* cartridge, NesCpu& cpu);
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	void RecomputePrgMappings() override;
 	void RecomputeChrMappings() override;
@@ -55,7 +55,7 @@ private:
 	uint8_t chrBank1Reg = 0;
 	
 	Cartridge* cartridge;
-	CPU& cpu;
+	NesCpu& cpu;
 	//ines_file_t* inesFile;
 	uint64_t lastWriteCycle = 0;
 	bool debug = false;

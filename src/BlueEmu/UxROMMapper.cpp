@@ -1,6 +1,5 @@
 #include "UxROMMapper.h"
 #include "MMC3.h"
-#include "CPU.h"
 #include "Cartridge.h"
 #include "Bus.h"
 #include "PPU.h"
@@ -22,7 +21,7 @@ inline void UxROMMapper::dbg(const wchar_t* fmt, ...) {
 #endif
 }
 
-UxROMMapper::UxROMMapper(Bus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b), cpu(b.cpu) {
+UxROMMapper::UxROMMapper(Bus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b) {
 	MapperBase::SetPrgPageSize(0x4000);
 	MapperBase::SetChrPageSize(0x2000);
 	prgBank16kCount = prgRomSize;

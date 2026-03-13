@@ -6,7 +6,7 @@
 
 class Bus;
 class Cartridge;
-class CPU;
+class NesCpu;
 class RendererLoopy;
 
 #ifdef _DEBUG
@@ -51,7 +51,7 @@ private:
 	uint8_t m_regSelect;
 
 	Cartridge* cart;
-	CPU& cpu;
+	NesCpu& cpu;
 	Bus& bus;
 
 	// IRQ state

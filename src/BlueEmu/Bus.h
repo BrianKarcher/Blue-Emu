@@ -2,7 +2,7 @@
 #include <Windows.h>
 #include <stdint.h>
 #include <array>
-#include "cpu.h"
+#include "NesCpu.h"
 #include "Cartridge.h"
 #include "RAMMapper.h"
 #include "MemoryMapper.h"
@@ -16,7 +16,7 @@ class Serializer;
 class Bus
 {
 public:
-	Bus(CPU& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus);
+	Bus(NesCpu& cpu, PPU& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus);
 	~Bus();
 
 	RAMMapper ramMapper;
@@ -46,7 +46,7 @@ public:
 	bool IrqPending();
 
 	// Devices connected to the bus
-	CPU& cpu;
+	NesCpu& cpu;
 	PPU& ppu;
 	APU& apu;
 	Cartridge& cart;

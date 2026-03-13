@@ -3,7 +3,7 @@
 #include "SharedContext.h"
 #include "AudioRingBuffer.h"
 #include <chrono>
-#include "CPU.h"
+#include "NesCpu.h"
 #include "PPU.h"
 #include "APU.h"
 #include "Bus.h"

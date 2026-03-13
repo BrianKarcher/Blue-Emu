@@ -22,7 +22,6 @@ public:
 	UxROMMapper(Bus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
 
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
-	void ClockIRQCounter(uint16_t ppu_address);
 	void RecomputePrgMappings() override;
 	void RecomputeChrMappings() override;
 	void shutdown() {}
@@ -36,6 +35,5 @@ private:
 	uint8_t prgBank16kCount;
 
 	Cartridge* cart;
-	CPU& cpu;
 	Bus& bus;
 };

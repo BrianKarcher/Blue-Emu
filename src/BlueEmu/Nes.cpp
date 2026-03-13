@@ -2,7 +2,7 @@
 #include "Bus.h"
 #include "PPU.h"
 #include "Cartridge.h"
-#include "CPU.h"
+#include "NesCpu.h"
 #include "APU.h"
 #include "Input.h"
 #include "SharedContext.h"
@@ -22,7 +22,7 @@ Nes::Nes(SharedContext& ctx) {
     openBus_ = new OpenBusMapper();
     _debuggerContext = ctx.debugger_context;
     ppu_ = new PPU(ctx, *this);
-    cpu_ = new CPU(*openBus_, ctx, *_debuggerContext, *ppu_);
+    cpu_ = new NesCpu(*openBus_, ctx, *_debuggerContext, *ppu_);
     cart_ = new Cartridge(ctx, *cpu_);
     bus_ = new Bus(*cpu_, *ppu_, *apu_, *input_, *cart_, *openBus_);
     bus_->initialize();

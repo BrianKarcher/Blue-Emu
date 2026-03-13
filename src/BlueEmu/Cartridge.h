@@ -14,14 +14,14 @@
 #define LOG(...) do {} while(0) // completely removed by compiler
 #endif
 
-class CPU;
+class NesCpu;
 class Bus;
 class SharedContext;
 
 class Cartridge
 {
 public:
-	Cartridge(SharedContext& ctx, CPU& c);
+	Cartridge(SharedContext& ctx, NesCpu& c);
 	void connectBus(Bus* bus) { m_bus = bus; }
 
 	void LoadROM(const std::string& filePath);
@@ -40,7 +40,7 @@ public:
 	std::filesystem::path getAndEnsureSavePath();
 private:
 	Bus* m_bus;
-	CPU& cpu;
+	NesCpu& cpu;
 	std::vector<uint8_t> ReadNesFromZip(const std::string& zipPath);
 	std::vector<uint8_t> LoadFileToBuffer(const std::string& path);
 	void loadSRAM();
