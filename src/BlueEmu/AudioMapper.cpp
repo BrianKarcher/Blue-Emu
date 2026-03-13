@@ -1,8 +1,8 @@
 #include "AudioMapper.h"
-#include "Bus.h"
-#include "APU.h"
+#include "NesBus.h"
+#include "NesApu.h"
 
-void AudioMapper::register_memory(Bus& bus) {
+void AudioMapper::register_memory(NesBus& bus) {
 	bus.WriteRegisterAdd(0x4000, 0x4013, this);
 	bus.WriteRegisterAdd(0x4015, 0x4015, this);
 	bus.WriteRegisterAdd(0x4017, 0x4017, this);

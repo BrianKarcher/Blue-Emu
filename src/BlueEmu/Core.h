@@ -5,10 +5,10 @@
 #include <wchar.h>
 #include <math.h>
 #include <array>
-#include "bus.h"
+#include "NesBus.h"
 #include "NesPpu.h"
 #include "NesCpu.h"
-#include "APU.h"
+#include "NesApu.h"
 #include "Input.h"
 #include "PPUViewer.h"
 #include "EmulatorCore.h"
@@ -98,7 +98,7 @@ private:
 	GLuint nes_texture;
 	GLuint pbo;
 	HMENU hMenu;
-	Bus* _bus;
+	NesBus* _bus;
 	DebuggerContext* _dbgCtx;
 	void updateMenu();
 	bool RenderFrame(const uint32_t* frame_data);

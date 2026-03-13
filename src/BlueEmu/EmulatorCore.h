@@ -15,7 +15,7 @@
 #define FPS_CAP
 
 class DebuggerContext;
-class Bus;
+class NesBus;
 class NesPpu;
 class Cartridge;
 
@@ -31,7 +31,7 @@ public:
 	int runFrame();
 	void start();
 	void stop();
-	Bus* GetBus() {
+	NesBus* GetNesBus() {
 		return nes.bus_;
 	}
 	NesPpu* GetNesPpu() {

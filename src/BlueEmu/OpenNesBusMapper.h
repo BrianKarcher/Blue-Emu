@@ -2,30 +2,30 @@
 #include <cstdint>
 #include "MemoryMapper.h"
 
-class OpenBusMapper : public MemoryMapper
+class OpenNesBusMapper : public MemoryMapper
 {
 private:
-	uint8_t openBus;
+	uint8_t openNesBus;
 
 public:
-	OpenBusMapper() : openBus(0) {
+	OpenNesBusMapper() : openNesBus(0) {
 
 	}
 
-	~OpenBusMapper() {
+	~OpenNesBusMapper() {
 
 	}
 
-	void setOpenBus(uint8_t value) {
-		openBus = value;
+	void setOpenNesBus(uint8_t value) {
+		openNesBus = value;
 	}
 
 	inline uint8_t read(uint16_t address) {
-		return openBus;
+		return openNesBus;
 	}
 
 	uint8_t peek(uint16_t address) {
-		return openBus;
+		return openNesBus;
 	}
 
 	inline void write(uint16_t address, uint8_t value) {

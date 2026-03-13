@@ -53,7 +53,7 @@
     <ClCompile Include="NROM.cpp">
       <Filter>Core\NES\Mappers</Filter>
     </ClCompile>
-    <ClCompile Include="Bus.cpp">
+    <ClCompile Include="NesBus.cpp">
       <Filter>Core\NES</Filter>
     </ClCompile>
     <ClCompile Include="NesCpu.cpp">
@@ -188,7 +188,7 @@
     <ClInclude Include="MapperBase.h">
       <Filter>Core\NES\Mappers</Filter>
     </ClInclude>
-    <ClInclude Include="Bus.h">
+    <ClInclude Include="NesBus.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
     <ClInclude Include="NesCpu.h">
@@ -206,7 +206,7 @@
     <ClInclude Include="AudioBackend.h">
       <Filter>Core\Shared</Filter>
     </ClInclude>
-    <ClInclude Include="APU.h">
+    <ClInclude Include="NesApu.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
     <ClInclude Include="AudioMapper.h">
@@ -233,7 +233,7 @@
     <ClInclude Include="MemoryMapper.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
-    <ClInclude Include="OpenBusMapper.h">
+    <ClInclude Include="OpenNesBusMapper.h">
       <Filter>Core\NES</Filter>
     </ClInclude>
     <ClInclude Include="Serializer.h">

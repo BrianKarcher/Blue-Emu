@@ -82,7 +82,7 @@ static constexpr uint32_t m_nesPalette[64] = {
 	0xFFE4E594, 0xFFCFEF96, 0xFFBDF4AB, 0xFFB3F3CC, 0xFFB5EBF2, 0xFFB8B8B8, 0xFF000000, 0xFF000000
 };
 
-class Bus;
+class NesBus;
 class Core;
 class RendererLoopy;
 class A12Mapper;
@@ -95,9 +95,9 @@ class NesPpu : public MemoryMapper
 public:
 	NesPpu(SharedContext& ctx, Nes& nes);
 	~NesPpu();
-	void register_memory(Bus& bus);
+	void register_memory(NesBus& bus);
 	void initialize();
-	void connectBus(Bus* bus) { this->bus = bus; }
+	void connectNesBus(NesBus* bus) { this->bus = bus; }
 	RendererLoopy* renderer;
 	void reset();
 	void step();
@@ -121,7 +121,7 @@ public:
 
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
 	uint8_t oamAddr;
-	Bus* bus;
+	NesBus* bus;
 	A12Mapper* m_mapper;
 	Nes& nes;
 

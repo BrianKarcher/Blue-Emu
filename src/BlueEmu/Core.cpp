@@ -14,7 +14,7 @@
 #include "DebuggerContext.h"
 
 Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this, io), hexViewer(this, context), _dbgCtx(context.debugger_context) {
-	_bus = emulator.GetBus();
+	_bus = emulator.GetNesBus();
 }
 
 SDL_Window* window = nullptr;

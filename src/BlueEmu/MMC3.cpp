@@ -1,7 +1,7 @@
 #include "MMC3.h"
 #include "NesCpu.h"
 #include "Cartridge.h"
-#include "Bus.h"
+#include "NesBus.h"
 #include "NesPpu.h"
 #include "RendererLoopy.h"
 #include "Mapper.h"
@@ -23,7 +23,7 @@ inline void MMC3::dbg(const wchar_t* fmt, ...) {
 #endif
 }
 
-MMC3::MMC3(Bus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b), cpu(b.cpu) {
+MMC3::MMC3(NesBus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b), cpu(b.cpu) {
 	MapperBase::SetPrgPageSize(0x2000);
 	MapperBase::SetChrPageSize(0x400);
 	renderLoopy = bus.ppu.renderer;

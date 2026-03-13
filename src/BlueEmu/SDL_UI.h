@@ -7,10 +7,10 @@
 #include <wchar.h>
 #include <math.h>
 #include <array>
-#include "bus.h"
+#include "NesBus.h"
 #include "NesPpu.h"
 #include "NesCpu.h"
-#include "APU.h"
+#include "NesApu.h"
 #include "Input.h"
 #include "PPUViewer.h"
 #include "EmulatorCore.h"

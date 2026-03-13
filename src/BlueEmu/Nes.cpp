@@ -1,15 +1,15 @@
 #include "Nes.h"
-#include "Bus.h"
+#include "NesBus.h"
 #include "NesPpu.h"
 #include "Cartridge.h"
 #include "NesCpu.h"
-#include "APU.h"
+#include "NesApu.h"
 #include "Input.h"
 #include "SharedContext.h"
 #include <vector>
 #include "AudioMapper.h"
 #include "InputMappers.h"
-#include "OpenBusMapper.h"
+#include "OpenNesBusMapper.h"
 #include "Serializer.h"
 #include "DebuggerContext.h"
 
@@ -17,18 +17,18 @@
 
 Nes::Nes(SharedContext& ctx) {
     context_ = &ctx;
-	apu_ = new APU();
+	apu_ = new NesApu();
     input_ = new Input();
-    openBus_ = new OpenBusMapper();
+    openNesBus_ = new OpenNesBusMapper();
     _debuggerContext = ctx.debugger_context;
     ppu_ = new NesPpu(ctx, *this);
-    cpu_ = new NesCpu(*openBus_, ctx, *_debuggerContext, *ppu_);
+    cpu_ = new NesCpu(*openNesBus_, ctx, *_debuggerContext, *ppu_);
     cart_ = new Cartridge(ctx, *cpu_);
-    bus_ = new Bus(*cpu_, *ppu_, *apu_, *input_, *cart_, *openBus_);
+    bus_ = new NesBus(*cpu_, *ppu_, *apu_, *input_, *cart_, *openNesBus_);
     bus_->initialize();
-	cpu_->connectBus(bus_);
-	ppu_->connectBus(bus_);
-	cart_->connectBus(bus_);
+	cpu_->connectNesBus(bus_);
+	ppu_->connectNesBus(bus_);
+	cart_->connectNesBus(bus_);
     ppu_->initialize();
 	ppu_->register_memory(*bus_);
 	audioMapper_ = new AudioMapper(*apu_);

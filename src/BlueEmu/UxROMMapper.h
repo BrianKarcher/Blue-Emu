@@ -3,7 +3,7 @@
 #include <array>
 #include "MapperBase.h"
 
-class Bus;
+class NesBus;
 class Cartridge;
 class CPU;
 class RendererLoopy;
@@ -19,7 +19,7 @@ class RendererLoopy;
 class UxROMMapper : public MapperBase
 {
 public:
-	UxROMMapper(Bus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
+	UxROMMapper(NesBus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
 
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	void RecomputePrgMappings() override;
@@ -35,5 +35,5 @@ private:
 	uint8_t prgBank16kCount;
 
 	Cartridge* cart;
-	Bus& bus;
+	NesBus& bus;
 };

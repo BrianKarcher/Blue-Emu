@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-class Bus;
+class NesBus;
 class Core;
 class DebuggerContext;
 class CPU;
@@ -110,7 +110,7 @@ private:
 	std::vector<uint16_t> displayList;
 	// addr to index in displayList
 	std::unordered_map<int, int> displayMap;
-	Bus* _bus;
+	NesBus* _bus;
 	HINSTANCE hInst;
 
 	Core& _core;

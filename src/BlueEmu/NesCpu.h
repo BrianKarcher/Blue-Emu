@@ -30,8 +30,8 @@ class DebuggerContext;
 #define FLAG_OVERFLOW  0x40
 #define FLAG_NEGATIVE  0x80
 
-class Bus;
-class OpenBusMapper;
+class NesBus;
+class OpenNesBusMapper;
 class Serializer;
 class SharedContext;
 class NesPpu;
@@ -39,8 +39,8 @@ class NesPpu;
 class NesCpu
 {
 public:
-	NesCpu(OpenBusMapper& openBus, SharedContext& ctx, DebuggerContext& dbg, NesPpu& ppu);
-	void connectBus(Bus* bus);
+	NesCpu(OpenNesBusMapper& openNesBus, SharedContext& ctx, DebuggerContext& dbg, NesPpu& ppu);
+	void connectNesBus(NesBus* bus);
 
 	bool ShouldPause();
 	inline uint8_t ReadByte(uint16_t addr);
@@ -64,7 +64,7 @@ public:
 	void Reset();
 	void AddCycles(int count);
 	uint64_t GetCycleCount();
-	Bus* bus;
+	NesBus* bus;
 	void Activate(bool active);
 	void SetPC(uint16_t address);
 	uint16_t GetPC();
@@ -1991,7 +1991,7 @@ private:
 	// The Lookup Table
 	InstructionHandler opcode_table[259];
 
-	OpenBusMapper& openBus;
+	OpenNesBusMapper& openNesBus;
 	DebuggerContext& dbgCtx;
 	SharedContext& sharedCtx;
 	NesPpu& ppu;

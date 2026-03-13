@@ -1,6 +1,6 @@
 #include "Cartridge.h"
 #include <string>
-#include "Bus.h"
+#include "NesBus.h"
 #include "INESLoader.h"
 #include "NROM.h"
 #include "MapperBase.h"

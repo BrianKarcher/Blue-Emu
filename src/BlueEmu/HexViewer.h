@@ -6,7 +6,7 @@
 class Core;
 class SharedContext;
 class DebuggerContext;
-class Bus;
+class NesBus;
 
 // Memory sources
 #define CPU_SOURCE 0
@@ -18,7 +18,7 @@ public:
 	HexViewer(Core* core, SharedContext& sharedCtx);
 	void DrawMemoryViewer(const char* title, bool* hexOpen);
 	DebuggerContext* _dbgCtx;
-	Bus* _bus;
+	NesBus* _bus;
 private:
 	int sourceIdx = CPU_SOURCE;
 	size_t size = 0x10000;

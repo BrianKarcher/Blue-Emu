@@ -8,7 +8,7 @@ This repo will be refactored to support multiple systems.
 For NES emulation, among other things, it is compatible with:
 - 6502 processor
 - NesPpu
-- APU
+- NesApu
 - Bank switching (MMC1, AxROM, CNROM, DxROM, MMC2, MMC3, NROM, and UxROM are supported)
 - Game saves
 - Savestates
@@ -19,7 +19,7 @@ https://www.nesdev.org/wiki/NES_reference_guide
 When designing and creating an emulator for NES games, there are several considerations we have to take into account.
 
 The NES contains an 8-bit processor that can access a 16-bit memory address.
-The CPU can access a memory range of 65 KB. Of which 2 KB is dedicated to system RAM. ($0000 to $07FF). This then gets mirrored from $0800-$1FFF. $2000 to $2007 are for the NesPpu registers. $2008 to $3FFF are mirrors of the NesPpu registers. $4000 to $4017 are APU and I/O registers. $4018 to $401F is APU and I/O functionality that is normally disabled.
+The CPU can access a memory range of 65 KB. Of which 2 KB is dedicated to system RAM. ($0000 to $07FF). This then gets mirrored from $0800-$1FFF. $2000 to $2007 are for the NesPpu registers. $2008 to $3FFF are mirrors of the NesPpu registers. $4000 to $4017 are NesApu and I/O registers. $4018 to $401F is NesApu and I/O functionality that is normally disabled.
 
 $6000-$7FFF is cartridge RAM, when present (This is where your saves are stored. It is also a work area as it is vastly larger than the built-in RAM).
 $8000-$FFFF is the cartridge ROM and mapper registers.

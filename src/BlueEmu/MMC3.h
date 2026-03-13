@@ -4,7 +4,7 @@
 #include "MapperBase.h"
 #include "A12Mapper.h"
 
-class Bus;
+class NesBus;
 class Cartridge;
 class NesCpu;
 class RendererLoopy;
@@ -20,7 +20,7 @@ class RendererLoopy;
 class MMC3 : public MapperBase, public A12Mapper
 {
 public:
-	MMC3(Bus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
+	MMC3(NesBus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
 	~MMC3();
 
 	void initialize(ines_file_t& data) override;
@@ -52,7 +52,7 @@ private:
 
 	Cartridge* cart;
 	NesCpu& cpu;
-	Bus& bus;
+	NesBus& bus;
 
 	// IRQ state
 	uint8_t irq_latch;

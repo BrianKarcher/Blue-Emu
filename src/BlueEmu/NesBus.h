@@ -8,20 +8,20 @@
 #include "MemoryMapper.h"
 
 class NesPpu;
-class APU;
+class NesApu;
 class Input;
-class OpenBusMapper;
+class OpenNesBusMapper;
 class Serializer;
 
-class Bus
+class NesBus
 {
 public:
-	Bus(NesCpu& cpu, NesPpu& ppu, APU& apu, Input& input, Cartridge& cart, OpenBusMapper& openBus);
-	~Bus();
+	NesBus(NesCpu& cpu, NesPpu& ppu, NesApu& apu, Input& input, Cartridge& cart, OpenNesBusMapper& openNesBus);
+	~NesBus();
 
 	RAMMapper ramMapper;
 	// Some addresses are mapped to different devices, so we use a memory map
-	// An example is 0x4017, which is mapped to the APU (write), but also to an Input device (read)
+	// An example is 0x4017, which is mapped to the NesApu (write), but also to an Input device (read)
 	MemoryMapper** readMemoryMap; // 64KB memory map
 	MemoryMapper** writeMemoryMap; // 64KB memory map
 
@@ -48,10 +48,10 @@ public:
 	// Devices connected to the bus
 	NesCpu& cpu;
 	NesPpu& ppu;
-	APU& apu;
+	NesApu& apu;
 	Cartridge& cart;
 	Input& input;
-	OpenBusMapper& openBus;
+	OpenNesBusMapper& openNesBus;
 
 private:
 

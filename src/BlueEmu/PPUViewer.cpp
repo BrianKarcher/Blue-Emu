@@ -1,5 +1,5 @@
 #include "PPUViewer.h"
-#include "Bus.h"
+#include "NesBus.h"
 #include "Core.h"
 #include "EmulatorCore.h"
 #include "Nes.h"

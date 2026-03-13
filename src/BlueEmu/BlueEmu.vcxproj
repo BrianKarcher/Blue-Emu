@@ -142,7 +142,7 @@
     <ClCompile Include="AudioBackend.cpp" />
     <ClCompile Include="AudioMapper.cpp" />
     <ClCompile Include="AxROMMapper.cpp" />
-    <ClCompile Include="Bus.cpp" />
+    <ClCompile Include="NesBus.cpp" />
     <ClCompile Include="Cartridge.cpp" />
     <ClCompile Include="CNROM.cpp" />
     <ClCompile Include="Core.cpp" />
@@ -184,7 +184,7 @@
     <ClInclude Include="AudioMapper.h" />
     <ClInclude Include="AudioRingBuffer.h" />
     <ClInclude Include="AxROMMapper.h" />
-    <ClInclude Include="Bus.h" />
+    <ClInclude Include="NesBus.h" />
     <ClInclude Include="Cartridge.h" />
     <ClInclude Include="CNROM.h" />
     <ClInclude Include="CommandQueue.h" />
@@ -206,8 +206,8 @@
     <ClInclude Include="MMC2Mapper.h" />
     <ClInclude Include="MMC3.h" />
     <ClInclude Include="Nes.h" />
-    <ClInclude Include="APU.h" />
-    <ClInclude Include="OpenBusMapper.h" />
+    <ClInclude Include="NesApu.h" />
+    <ClInclude Include="OpenNesBusMapper.h" />
     <ClInclude Include="NesPpu.h" />
     <ClInclude Include="NesCpu.h" />
     <ClInclude Include="NROM.h" />

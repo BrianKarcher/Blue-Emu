@@ -4,7 +4,7 @@
 #include "SharedContext.h"
 
 class NesPpu;
-class Bus;
+class NesBus;
 class A12Mapper;
 class Serializer;
 
@@ -103,7 +103,7 @@ public:
 	void Deserialize(Serializer& serializer);
 
 private:
-    Bus* m_bus;
+    NesBus* m_bus;
     NesPpu* m_ppu;
     A12Mapper* m_mapper;
     SharedContext& context;

@@ -1,5 +1,5 @@
 #include "Mapper.h"
-#include "Bus.h"
+#include "NesBus.h"
 
 uint8_t Mapper::read(uint16_t address) {
 	if (address < 0x8000) {
@@ -30,7 +30,7 @@ void Mapper::write(uint16_t address, uint8_t value) {
 	}
 }
 
-void Mapper::register_memory(Bus& bus) {
+void Mapper::register_memory(NesBus& bus) {
 	bus.ReadRegisterAdd(0x6000, 0xFFFF, this);
 	bus.WriteRegisterAdd(0x6000, 0xFFFF, this);
 }

@@ -4,7 +4,7 @@
 #include "imgui.h"
 
 class Core;
-class Bus;
+class NesBus;
 class NesPpu;
 class SharedContext;
 class Cartridge;

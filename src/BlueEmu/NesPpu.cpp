@@ -2,7 +2,7 @@
 #include <string>
 #include <cstdint>
 #include <WinUser.h>
-#include "Bus.h"
+#include "NesBus.h"
 #include "Core.h"
 #include "RendererLoopy.h"
 #include "A12Mapper.h"
@@ -72,7 +72,7 @@ uint8_t NesPpu::peek(uint16_t address) {
 	return peek_register(0x2000 + (address & 0x7));
 }
 
-void NesPpu::register_memory(Bus& bus) {
+void NesPpu::register_memory(NesBus& bus) {
 	// TODO : Implement NesPpu open bus.
 	bus.ReadRegisterAdd(0x2000, 0x3FFF, this);
 	bus.ReadRegisterAdd(0x4014, 0x4014, this);

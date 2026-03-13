@@ -2,7 +2,7 @@
 #include "MemoryMapper.h"
 
 class Input;
-class Bus;
+class NesBus;
 
 class ReadController1Mapper : public MemoryMapper
 {
@@ -15,7 +15,7 @@ public:
 		return 0;
 	}
 	inline void write(uint16_t address, uint8_t value);
-	void register_memory(Bus& bus);
+	void register_memory(NesBus& bus);
 private:
 	Input& m_input;
 };
@@ -31,7 +31,7 @@ public:
 		return 0;
 	}
 	inline void write(uint16_t address, uint8_t value);
-	void register_memory(Bus& bus);
+	void register_memory(NesBus& bus);
 private:
 	Input& m_input;
 };

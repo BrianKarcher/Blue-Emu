@@ -7,7 +7,7 @@
 #include "MapperBase.h"
 
 HexViewer::HexViewer(Core* core, SharedContext& sharedCtx) : _sharedCtx(sharedCtx), _dbgCtx(sharedCtx.debugger_context) {
-    _bus = core->emulator.GetBus();
+    _bus = core->emulator.GetNesBus();
     hexSources[CPU_SOURCE] = HexReadCPU;
 	hexSources[NesPpu_SOURCE] = HexReadNesPpu;
 }
@@ -41,7 +41,7 @@ void HexViewer::DrawMemoryViewer(const char* title, bool *hexOpen) {
     ImGui::Begin(title, hexOpen);
 
     // 1. Dropdown for Hex Source
-    const char* sources[] = { "CPU Bus", "NesPpu VRAM", "OAM", "Palette" };
+    const char* sources[] = { "CPU NesBus", "NesPpu VRAM", "OAM", "Palette" };
     static int current_source = 0; // Local state or use pMain->hexView
 
     ImGui::SetNextItemWidth(150); // Keep it compact

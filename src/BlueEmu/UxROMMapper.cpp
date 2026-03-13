@@ -1,7 +1,7 @@
 #include "UxROMMapper.h"
 #include "MMC3.h"
 #include "Cartridge.h"
-#include "Bus.h"
+#include "NesBus.h"
 #include "NesPpu.h"
 #include "RendererLoopy.h"
 #include <array>
@@ -21,7 +21,7 @@ inline void UxROMMapper::dbg(const wchar_t* fmt, ...) {
 #endif
 }
 
-UxROMMapper::UxROMMapper(Bus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b) {
+UxROMMapper::UxROMMapper(NesBus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b) {
 	MapperBase::SetPrgPageSize(0x4000);
 	MapperBase::SetChrPageSize(0x2000);
 	prgBank16kCount = prgRomSize;

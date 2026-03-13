@@ -1,6 +1,6 @@
 #include "InputMappers.h"
 #include "Input.h"
-#include "Bus.h"
+#include "NesBus.h"
 
 ReadController1Mapper::ReadController1Mapper(Input& input) : m_input(input) { }
 
@@ -16,7 +16,7 @@ inline void ReadController1Mapper::write(uint16_t address, uint8_t value) {
 	m_input.Poll();
 }
 
-void ReadController1Mapper::register_memory(Bus& bus) {
+void ReadController1Mapper::register_memory(NesBus& bus) {
 	bus.ReadRegisterAdd(0x4016, 0x4016, this);
 	bus.WriteRegisterAdd(0x4016, 0x4016, this);
 }
@@ -31,6 +31,6 @@ inline void ReadController2Mapper::write(uint16_t address, uint8_t value) {
 	// open bus
 }
 
-void ReadController2Mapper::register_memory(Bus& bus) {
+void ReadController2Mapper::register_memory(NesBus& bus) {
 	bus.ReadRegisterAdd(0x4017, 0x4017, this);
 }

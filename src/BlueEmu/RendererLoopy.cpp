@@ -6,7 +6,7 @@
 #include "NesPpu.h"
 #include "A12Mapper.h"
 #include "Core.h"
-#include "Bus.h"
+#include "NesBus.h"
 #include "SharedContext.h"
 #include "RendererLoopy.h"
 #include "Serializer.h"

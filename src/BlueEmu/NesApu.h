@@ -5,9 +5,9 @@
 #include <functional>
 #include "Serializer.h"
 
-class APU {
+class NesApu {
 public:
-    APU() : cycle_counter(0), frame_counter_mode(0),
+    NesApu() : cycle_counter(0), frame_counter_mode(0),
         frame_counter_irq_inhibit(false), frame_counter_irq_flag(false),
         frame_counter_step(0), frame_counter_reset_delay(0) {
         reset();
@@ -934,7 +934,7 @@ private:
         // Control
         bool enabled;
 
-        // Memory read callback (must be set by APU)
+        // Memory read callback (must be set by NesApu)
         std::function<uint8_t(uint16_t)> read_memory;
 
         DMCChannel() : irq_enabled(false), irq_flag(false), loop(false),
@@ -1275,7 +1275,7 @@ private:
 		bool enabled;
     };
 
-    struct APUState {
+    struct NesApuState {
         // Frame counter state
         uint8_t frame_counter_mode;  
         bool frame_counter_irq_inhibit;
@@ -1299,7 +1299,7 @@ private:
 
 // ===== IMPLEMENTATION NOTES =====
 /*
-APU runs at CPU clock rate (approximately 1.79 MHz NTSC)
+NesApu runs at CPU clock rate (approximately 1.79 MHz NTSC)
 
 Frame Counter modes:
 - 4-step: Quarter frame at cycles 3728.5, 7456.5, 11185.5, 14914.5
@@ -1314,6 +1314,6 @@ pulse_out = 0.00752 * (pulse1 + pulse2)
 tnd_out = 0.00851 * triangle + 0.00494 * noise + 0.00335 * dmc
 output = pulse_out + tnd_out
 
-Each channel's timer is clocked every APU cycle.
+Each channel's timer is clocked every NesApu cycle.
 Envelopes, length counters, and sweep units are clocked by frame counter.
 */

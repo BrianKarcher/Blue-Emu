@@ -9,28 +9,28 @@ const double CPU_FREQ = 1789773.0;
 const double CYCLES_PER_SAMPLE = CPU_FREQ / 44100.0;  // 40.58 exact
 const int TARGET_SAMPLES_PER_FRAME = 735; // 44100 / 60 = 735 samples per frame
 
-class Bus;
+class NesBus;
 class NesPpu;
 class Cartridge;
 class NesCpu;
-class APU;
+class NesApu;
 class Input;
 class SharedContext;
 class AudioMapper;
 class ReadController1Mapper;
 class ReadController2Mapper;
-class OpenBusMapper;
+class OpenNesBusMapper;
 class Serializer;
 class DebuggerContext;
 
 class Nes
 {
 public:
-	Bus& bus() { return *bus_; }
+	NesBus& bus() { return *bus_; }
 	NesPpu& ppu() { return *ppu_; }
 	Cartridge& cart() { return *cart_; }
 	NesCpu& cpu() { return *cpu_; }
-	APU& apu() { return *apu_; }
+	NesApu& apu() { return *apu_; }
 	Input& input() { return *input_; }
 	SharedContext& context() { return *context_; }
 	AudioMapper& audioMapper() {
@@ -54,17 +54,17 @@ public:
 	// Audio buffer for queueing samples
 	std::vector<float> audioBuffer;
 
-	Bus* bus_;
+	NesBus* bus_;
 	NesPpu* ppu_;
 	Cartridge* cart_;
 	NesCpu* cpu_;
-	APU* apu_;
+	NesApu* apu_;
 	Input* input_;
 	SharedContext* context_;
 	AudioMapper* audioMapper_;
 	ReadController1Mapper* readController1Mapper_;
 	ReadController2Mapper* readController2Mapper_;
-	OpenBusMapper* openBus_;
+	OpenNesBusMapper* openNesBus_;
 	DebuggerContext* _debuggerContext;
 
 	void Serialize(Serializer& serializer);

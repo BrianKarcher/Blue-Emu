@@ -5,7 +5,7 @@
 #include <string>
 #include "resource.h"
 #include "DebuggerContext.h"
-#include "Bus.h"
+#include "NesBus.h"
 #include "SharedContext.h"
 #include <sstream>
 #include "imgui.h"
@@ -13,7 +13,7 @@
 #pragma comment(lib, "comctl32.lib")
 
 DebuggerUI::DebuggerUI(HINSTANCE hInst, Core& core, ImGuiIO& io) : hInst(hInst), _core(core), io(io) {
-	_bus = _core.emulator.GetBus();
+	_bus = _core.emulator.GetNesBus();
 	log = (uint8_t*)malloc(0x10000); // 64KB log buffer
     dbgCtx = _core.context.debugger_context;
 	sharedCtx = &_core.context;

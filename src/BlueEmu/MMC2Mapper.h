@@ -2,13 +2,13 @@
 #include <cstdint>
 #include "MapperBase.h"
 
-class Bus;
+class NesBus;
 class Cartridge;
 
 class MMC2Mapper : public MapperBase
 {
 public:
-    MMC2Mapper(Bus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
+    MMC2Mapper(NesBus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
 
     void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) override;
     void RecomputePrgMappings() override;
@@ -34,6 +34,6 @@ private:
     uint8_t latch_1; // Current selection for bank 1 (0 or 1)
 
     uint8_t prgBank8kCount;
-    Bus& bus;
+    NesBus& bus;
     Cartridge& cart;
 };

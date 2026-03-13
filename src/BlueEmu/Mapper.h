@@ -6,7 +6,7 @@
 #include "Serializer.h"
 
 class Cartridge;
-class Bus;
+class NesBus;
 
 class Mapper : public MemoryMapper {
 public:
@@ -27,7 +27,7 @@ public:
 	uint8_t read(uint16_t address);
 	uint8_t peek(uint16_t address);
 	void write(uint16_t address, uint8_t value);
-	void register_memory(Bus& bus);
+	void register_memory(NesBus& bus);
 
 	virtual void Serialize(Serializer& serializer) = 0;
 	virtual void Deserialize(Serializer& serializer) = 0;

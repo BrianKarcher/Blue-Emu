@@ -15,14 +15,14 @@
 #endif
 
 class NesCpu;
-class Bus;
+class NesBus;
 class SharedContext;
 
 class Cartridge
 {
 public:
 	Cartridge(SharedContext& ctx, NesCpu& c);
-	void connectBus(Bus* bus) { m_bus = bus; }
+	void connectNesBus(NesBus* bus) { m_bus = bus; }
 
 	void LoadROM(const std::string& filePath);
 	// Map a NesPpu address ($2000–$2FFF) to actual VRAM offset (0–0x7FF)
@@ -39,7 +39,7 @@ public:
 	std::wstring fileName;
 	std::filesystem::path getAndEnsureSavePath();
 private:
-	Bus* m_bus;
+	NesBus* m_bus;
 	NesCpu& cpu;
 	std::vector<uint8_t> ReadNesFromZip(const std::string& zipPath);
 	std::vector<uint8_t> LoadFileToBuffer(const std::string& path);

@@ -4,14 +4,14 @@
 #include <array>
 #include "MemoryMapper.h"
 
-class APU;
-class Bus;
+class NesApu;
+class NesBus;
 
 class AudioMapper : public MemoryMapper {
 public:
-	APU& apu;
+	NesApu& apu;
 
-	AudioMapper(APU& apu) : apu(apu) {
+	AudioMapper(NesApu& apu) : apu(apu) {
 
 	}
 
@@ -25,5 +25,5 @@ public:
 
 	void write(uint16_t address, uint8_t value);
 
-	void register_memory(Bus& bus);
+	void register_memory(NesBus& bus);
 };

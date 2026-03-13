@@ -5,8 +5,8 @@
 #include <chrono>
 #include "NesCpu.h"
 #include "NesPpu.h"
-#include "APU.h"
-#include "Bus.h"
+#include "NesApu.h"
+#include "NesBus.h"
 #include "Input.h"
 #include <vector>
 #include "Serializer.h"
