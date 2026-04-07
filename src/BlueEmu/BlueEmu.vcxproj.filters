@@ -306,5 +306,8 @@
     <Filter Include="Core\NES\Mappers">
       <UniqueIdentifier>{bb9fe524-da3a-4ab8-bc16-bc5684f68736}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Core\SNES">
+      <UniqueIdentifier>{0c925d4e-2cde-4d31-821b-159e049ebbae}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

@@ -1,8 +1,9 @@
 #pragma once
-#include <mutex>
-#include <condition_variable>
+#include <atomic>
 #include <cstdint>
-#include <vector>
+#include <condition_variable>
+#include <mutex>
+#include <array>
 #include "CommandQueue.h"
 
 #define WIDTH 256
@@ -14,19 +15,19 @@ class DebuggerContext;
 // Prevents multi-threading issues when accessing shared resources like video buffer and debugger state.
 class SharedContext {
 private:
-    std::mutex video_mutex;
-    std::condition_variable cv_frame_ready; // The signal object
+    static constexpr int BUFFER_COUNT = 3;
+    static constexpr int FRAME_SIZE = WIDTH * HEIGHT;
 
-    // We allocate the memory once.
-    std::vector<uint32_t> buffer_1;
-    std::vector<uint32_t> buffer_2;
+    // Fixed buffers (no reallocations ever)
+    std::array<std::array<uint32_t, FRAME_SIZE>, BUFFER_COUNT> buffers;
 
-    // Pointers that will swap targets
-    uint32_t* p_front_buffer = nullptr; // UI Reads this
-    uint32_t* p_back_buffer = nullptr;  // Core Writes this
+    // Buffer indices
+    std::atomic<int> back_index{ 0 };   // Core writes here
+    std::atomic<int> ready_index{ -1 }; // Completed frame
+    std::atomic<int> front_index{ 1 };  // UI reads here
 
-    // Flag to prevent spurious wakeups
-    bool has_new_frame = false;
+    std::mutex cv_mutex;
+    std::condition_variable cv_frame_ready;
 public:
     struct CpuState {
         uint16_t pc;
@@ -49,47 +50,57 @@ public:
     // Returns a pointer to the memory where the Core should draw the NEXT frame.
     // We do not lock here to allow the core to write freely.
     uint32_t* GetBackBuffer() {
-        return p_back_buffer;
+        return buffers[back_index.load(std::memory_order_relaxed)].data();
     }
 
     // --- CORE calls this ---
     // Signals that the back buffer is full and ready to be shown.
-    void SwapBuffers() {
-        {
-            std::lock_guard<std::mutex> lock(video_mutex);
-            std::swap(p_front_buffer, p_back_buffer);
-            has_new_frame = true;
-        } // Mutex releases here
-        // Wake up the UI thread immediately
+    void SubmitFrame() {
+        int back = back_index.load(std::memory_order_relaxed);
+
+        // Publish this buffer as ready
+        int previous_ready = ready_index.exchange(back, std::memory_order_acq_rel);
+
+        // Pick a new back buffer that is NOT front or ready
+        int front = front_index.load(std::memory_order_acquire);
+        int next_back = -1;
+
+        for (int i = 0; i < BUFFER_COUNT; i++) {
+            if (i != front && i != previous_ready) {
+                next_back = i;
+                break;
+            }
+        }
+
+        back_index.store(next_back, std::memory_order_release);
+
         cv_frame_ready.notify_one();
     }
 
-    // --- UI calls this ---
-    // Returns nullptr if timeout occurs (no new frame)
+    // --- UI thread ---
     const uint32_t* WaitForNewFrame(int timeout_ms) {
-        std::unique_lock<std::mutex> lock(video_mutex);
+        std::unique_lock<std::mutex> lock(cv_mutex);
 
-        // This puts the thread to SLEEP. It releases the mutex while sleeping.
-        // It wakes up ONLY if:
-        // 1. notify_one() is called AND has_new_frame is true
-        // 2. timeout_ms passes
-        bool received = cv_frame_ready.wait_for(lock, std::chrono::milliseconds(timeout_ms),
-            [this] { return has_new_frame; });
+        bool received = cv_frame_ready.wait_for(
+            lock,
+            std::chrono::milliseconds(timeout_ms),
+            [this] { return ready_index.load(std::memory_order_acquire) != -1; }
+        );
 
-        if (received) {
-            has_new_frame = false; // Reset for next time
-            return p_front_buffer;
+        if (!received) {
+            return nullptr;
         }
 
-        return nullptr; // Timed out (Core is lagging or paused)
+        // Consume the ready buffer
+        int ready = ready_index.exchange(-1, std::memory_order_acq_rel);
+        front_index.store(ready, std::memory_order_release);
+
+        return buffers[ready].data();
     }
 
-    // --- UI calls this ---
-    // Returns the most recent completed frame. 
-    // We return a const pointer because UI should only read.
     const uint32_t* GetFrontBuffer() {
-        std::lock_guard<std::mutex> lock(video_mutex);
-        return p_front_buffer;
+        int front = front_index.load(std::memory_order_acquire);
+        return buffers[front].data();
     }
 
 	CommandQueue command_queue;

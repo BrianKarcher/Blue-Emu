@@ -48,7 +48,7 @@ void NesPpu::reset()
 	paletteTable.fill(0x00);
 	renderer->reset();
 	clearBuffer(context.GetBackBuffer());
-	context.SwapBuffers();
+	context.SubmitFrame();
 	clearBuffer(context.GetBackBuffer());
 }
 

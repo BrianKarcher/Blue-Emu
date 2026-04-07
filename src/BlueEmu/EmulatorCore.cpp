@@ -88,7 +88,7 @@ void EmulatorCore::run() {
 
         nes.input_->PollControllerState();
         audioCycleCounter += runFrame();
-        context.SwapBuffers();
+        context.SubmitFrame();
         frameCount++;
 
 		dbgCtx->UpdateSnapshot(nes.bus_->ramMapper.cpuRAM.data(), nullptr);
