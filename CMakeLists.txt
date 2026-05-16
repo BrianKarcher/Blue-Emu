@@ -30,7 +30,7 @@ target_include_directories(imgui PUBLIC
 
 target_link_libraries(imgui PUBLIC SDL2::SDL2 OpenGL::GL)
 
-add_executable(nes_emu src/main.cpp)
+add_executable(nes_emu src/main.cpp src/Core.cpp)
 
 target_link_libraries(nes_emu PRIVATE
     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
