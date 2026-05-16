@@ -5,6 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_SOURCE_DIR}/bin/debug)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/bin/release)
+
 find_package(SDL2   CONFIG REQUIRED)
 find_package(libzip CONFIG REQUIRED)
 find_package(OpenGL        REQUIRED)
@@ -68,6 +71,19 @@ ${UI_DIR}/HexViewer.cpp
 ${UI_DIR}/PPUViewer.cpp
 ${UI_DIR}/SDL_UI.cpp
 )
+
+if(MSVC)
+    target_compile_options(nes_emu PRIVATE
+        $<$<CONFIG:Release>:/O2 /GL>
+    )
+    target_link_options(nes_emu PRIVATE
+        $<$<CONFIG:Release>:/LTCG>
+    )
+else()
+    target_compile_options(nes_emu PRIVATE
+        $<$<CONFIG:Release>:-O2 -s>
+    )
+endif()
 
 target_link_libraries(nes_emu PRIVATE
     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>

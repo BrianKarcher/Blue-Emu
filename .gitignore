@@ -1,6 +1,9 @@
 # Build
+bin/
 build/
 out/
+debug/
+release/
 
 # vcpkg installed packages
 vcpkg_installed/
