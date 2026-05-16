@@ -12,7 +12,7 @@
 #include "Serializer.h"
 
 RendererLoopy::RendererLoopy(SharedContext& ctx) : context(ctx) {
-
+    spriteLineBuffer.fill({ 255, 0, 0, false, false, false });  // 255 = no sprite
 }
 
 void RendererLoopy::initialize(NesPpu* ppu) {
