@@ -34,7 +34,7 @@ public:
 	void SetMapper(uint8_t value, ines_file_t& inesFile);
 	void unload();
 	bool isLoaded();
-	MapperBase* mapper;
+	MapperBase* mapper = nullptr;
 	SharedContext& ctx;
 	std::wstring fileName;
 	std::filesystem::path getAndEnsureSavePath();

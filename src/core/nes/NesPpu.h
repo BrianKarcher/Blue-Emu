@@ -122,7 +122,7 @@ public:
 	std::array<uint8_t, 0x100> oam; // 256 bytes OAM (sprite memory)
 	uint8_t oamAddr;
 	NesBus* bus;
-	A12Mapper* m_mapper;
+	A12Mapper* m_mapper = nullptr;
 	Nes& nes;
 
 	void Clock();

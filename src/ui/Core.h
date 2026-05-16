@@ -5,23 +5,22 @@
 #include <wchar.h>
 #include <math.h>
 #include <array>
-//#include "NesBus.h"
-//#include "NesPpu.h"
-//#include "NesCpu.h"
-//#include "NesApu.h"
-//#include "NesInput.h"
-//#include "PPUViewer.h"
-//#include "EmulatorCore.h"
-//#include "SharedContext.h"
-//#include "DebuggerUI.h"
-#include <imgui.h>
-#include <imgui_impl_sdl2.h>
-#include <imgui_impl_opengl3.h>
+#include "NesBus.h"
+#include "NesPpu.h"
+#include "NesCpu.h"
+#include "NesApu.h"
+#include "NesInput.h"
+#include "PPUViewer.h"
+#include "EmulatorCore.h"
+#include "SharedContext.h"
+#include "DebuggerUI.h"
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_opengl3.h"
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include <stdio.h>
-//#include "HexViewer.h"
-#include <string>S
+#include "HexViewer.h"
 
 template<class Interface>
 inline void SafeRelease(
@@ -53,21 +52,21 @@ class DebuggerContext;
 class Core
 {
 public:
-	//Core();
+	Core();
 	bool init();
 	SDL_GLContext gl_context;
 	ImGuiIO io;
-	//SharedContext context;
-	//EmulatorCore emulator;
-	//NesPpuViewer ppuViewer;
+	SharedContext context;
+	EmulatorCore emulator;
+	NesPpuViewer ppuViewer;
 	
 	// Register the window class and call methods for instantiating drawing resources
 	HRESULT Initialize();
 	HRESULT CreateWindows();
 	// Load the game ROM
-	//void LoadGame(
-	//	const std::string& szFileName
-	//);
+	void LoadGame(
+		const std::string& szFileName
+	);
 
 	HWND GetWindowHandle();
 	// Process and dispatch messages
@@ -92,21 +91,21 @@ public:
 	HWND hHexCombo = NULL;
 	HWND hHexDrawArea = NULL;
 	int hexView = 0;
-	//DebuggerUI debuggerUI;
-	//HexViewer hexViewer;
+	DebuggerUI debuggerUI;
+	HexViewer hexViewer;
 	//NesPpuViewer ppuViewer;
 private:
 	GLuint nes_texture;
 	GLuint pbo;
 	HMENU hMenu;
-	//NesBus* _bus;
+	NesBus* _bus;
 	DebuggerContext* _dbgCtx;
 	void updateMenu();
 	bool RenderFrame(const uint32_t* frame_data);
 	bool ClearFrame();
 	void DrawGameCentered();
 
-	//void PollControllerState();
+	void PollControllerState();
 	bool PollSDLEvents();
 	bool isPaused;
 	std::string lastOpenedPath = ".";

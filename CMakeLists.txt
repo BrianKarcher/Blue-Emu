@@ -33,10 +33,10 @@ target_link_libraries(imgui PUBLIC SDL2::SDL2 OpenGL::GL)
 set(SHARED_DIR ${CMAKE_SOURCE_DIR}/src/core/shared)
 set(NES_DIR ${CMAKE_SOURCE_DIR}/src/core/nes)
 set(MAPPERS_DIR ${CMAKE_SOURCE_DIR}/src/core/nes/mappers)
+set(UI_DIR ${CMAKE_SOURCE_DIR}/src/ui)
 
 add_executable(nes_emu
 src/main.cpp
-src/Core.cpp
 ${SHARED_DIR}/AudioBackend.cpp
 ${SHARED_DIR}/EmulatorCore.cpp
 ${SHARED_DIR}/Serializer.cpp
@@ -62,6 +62,11 @@ ${NES_DIR}/NesCpu.cpp
 ${NES_DIR}/NesInput.cpp
 ${NES_DIR}/NesPpu.cpp
 ${NES_DIR}/RendererLoopy.cpp
+${UI_DIR}/Core.cpp
+${UI_DIR}/DebuggerUI.cpp
+${UI_DIR}/HexViewer.cpp
+${UI_DIR}/PPUViewer.cpp
+${UI_DIR}/SDL_UI.cpp
 )
 
 target_link_libraries(nes_emu PRIVATE
@@ -80,6 +85,7 @@ target_include_directories(nes_emu
         ${CMAKE_SOURCE_DIR}/src/core/shared
         ${CMAKE_SOURCE_DIR}/src/core/nes
         ${CMAKE_SOURCE_DIR}/src/core/nes/mappers
+        ${CMAKE_SOURCE_DIR}/src/ui
 )
 
 if(APPLE)

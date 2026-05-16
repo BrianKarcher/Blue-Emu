@@ -3,19 +3,19 @@
 #include <sstream>
 #include <iomanip>
 #include <codecvt>
-//#include "resource.h"
+#include "resource.h"
 #include <commdlg.h>
-//#include "AudioBackend.h"
-//#include "SharedContext.h"
-//#include "DebuggerUI.h"
+#include "AudioBackend.h"
+#include "SharedContext.h"
+#include "DebuggerUI.h"
 #define USE_PLACES_FEATURE
 #include "ImGuiFileDialog.h"
-//#include "PPUViewer.h"
-//#include "DebuggerContext.h"
+#include "PPUViewer.h"
+#include "DebuggerContext.h"
 
-//Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this, io), hexViewer(this, context), _dbgCtx(context.debugger_context) {
-//	_bus = emulator.GetNesBus();
-//}
+Core::Core() : emulator(context), debuggerUI(HINST_THISCOMPONENT, *this, io), hexViewer(this, context), _dbgCtx(context.debugger_context) {
+	_bus = emulator.GetNesBus();
+}
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
@@ -97,7 +97,7 @@ bool Core::init()
         std::getline(config, lastOpenedPath);
     }
 
-    //ppuViewer.Initialize(this, &context);
+    ppuViewer.Initialize(this, &context);
 
     return true;
 }
@@ -119,7 +119,7 @@ HRESULT Core::Initialize()
 
 HRESULT Core::CreateWindows() {
     init();
-    //emulator.start();
+    emulator.start();
     return S_OK;
 }
 
@@ -127,13 +127,13 @@ void Core::updateMenu() {
 
 }
 
-//void Core::LoadGame(const std::string& filePath) {
-//    CommandQueue::Command cmd;
-//    cmd.type = CommandQueue::CommandType::LOAD_ROM;
-//    cmd.data = filePath;
-//    context.command_queue.Push(cmd);
-//    isPlaying = true;
-//}
+void Core::LoadGame(const std::string& filePath) {
+    CommandQueue::Command cmd;
+    cmd.type = CommandQueue::CommandType::LOAD_ROM;
+    cmd.data = filePath;
+    context.command_queue.Push(cmd);
+    isPlaying = true;
+}
 
 // Function to convert std::string (UTF-8) to std::wstring (UTF-16/UTF-32 depending on platform)
 //std::wstring stringToWstring(const std::string& str) {
@@ -239,10 +239,10 @@ bool Core::PollSDLEvents() {
             case SDL_KEYDOWN: {
                 switch (event.key.keysym.sym) {
                     case SDLK_ESCAPE: {
-                        //CommandQueue::Command cmd;
+                        CommandQueue::Command cmd;
                         bool newPauseState = !isPaused;
-                        //cmd.type = newPauseState ? CommandQueue::CommandType::PAUSE : CommandQueue::CommandType::RESUME;
-                        //context.command_queue.Push(cmd);
+                        cmd.type = newPauseState ? CommandQueue::CommandType::PAUSE : CommandQueue::CommandType::RESUME;
+                        context.command_queue.Push(cmd);
                         isPaused = newPauseState;
                     } break;
                     case SDLK_F11: {
@@ -250,27 +250,27 @@ bool Core::PollSDLEvents() {
                         SDL_SetWindowFullscreen(window, isFullScreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
                     } break;
                     case SDLK_F5: {
-                        //_dbgCtx->is_paused.store(false);
+                        _dbgCtx->is_paused.store(false);
                     } break;
                     case SDLK_F10: {
-                        //_dbgCtx->step_requested.store(true);
-                        //Sleep(10);
-                        //debuggerUI.GoTo(_dbgCtx->lastState.pc);
+                        _dbgCtx->step_requested.store(true);
+                        Sleep(10);
+                        debuggerUI.GoTo(_dbgCtx->lastState.pc);
                     } break;
                     case SDLK_g: {
                         if (SDL_GetModState() & KMOD_CTRL) {
-                            //debuggerUI.OpenGoToAddressDialog();
+                            debuggerUI.OpenGoToAddressDialog();
                         }
                     } break;
                     case SDLK_PERIOD: {
-                        //CommandQueue::Command cmd;
-                        //cmd.type = CommandQueue::CommandType::POWER;
-                        //context.command_queue.Push(cmd);
+                        CommandQueue::Command cmd;
+                        cmd.type = CommandQueue::CommandType::POWER;
+                        context.command_queue.Push(cmd);
                     } break;
                     case SDLK_COMMA: {
-                        //CommandQueue::Command cmd;
-                        //cmd.type = CommandQueue::CommandType::RESET;
-                        //context.command_queue.Push(cmd);
+                        CommandQueue::Command cmd;
+                        cmd.type = CommandQueue::CommandType::RESET;
+                        context.command_queue.Push(cmd);
                     } break;
                 }; // /switch
             } break; // / case SDL_KEYDOWN
@@ -279,17 +279,17 @@ bool Core::PollSDLEvents() {
                 break;
             case SDL_CONTROLLERDEVICEADDED:
             {
-                //CommandQueue::Command cmd;
-                //cmd.type = CommandQueue::CommandType::ADD_CONTROLLER;
-                //context.command_queue.Push(cmd);
+                CommandQueue::Command cmd;
+                cmd.type = CommandQueue::CommandType::ADD_CONTROLLER;
+                context.command_queue.Push(cmd);
             }
             break;
 
             case SDL_CONTROLLERDEVICEREMOVED:
             {
-                //CommandQueue::Command cmd;
-                //cmd.type = CommandQueue::CommandType::REMOVE_CONTROLLER;
-                //context.command_queue.Push(cmd);
+                CommandQueue::Command cmd;
+                cmd.type = CommandQueue::CommandType::REMOVE_CONTROLLER;
+                context.command_queue.Push(cmd);
             }
             break;
 
@@ -320,26 +320,26 @@ void Core::RunMessageLoop()
 
         bool got_new_frame = false;
 
-   //     if (isPlaying && !isPaused) {
-   //         // Wait for the Core (The "Sleep" phase)
-   //         // We wait up to 20ms. If the Core finishes in 5ms, we wake up in 5ms.
-   //         // If the Core hangs, we wake up in 20ms anyway to handle SDL events again.
-   //         const uint32_t* frame_data = context.WaitForNewFrame(20);
+        if (isPlaying && !isPaused) {
+            // Wait for the Core (The "Sleep" phase)
+            // We wait up to 20ms. If the Core finishes in 5ms, we wake up in 5ms.
+            // If the Core hangs, we wake up in 20ms anyway to handle SDL events again.
+            const uint32_t* frame_data = context.WaitForNewFrame(20);
 
-   //         if (prev_frame_data == frame_data) {
-   //             dupCount++;
-   //         }
-			//prev_frame_data = frame_data;
-   //         if (frame_data) {
-   //             RenderFrame(frame_data);
-   //             got_new_frame = true;
-   //         }
-   //     }
-   //     else {
-   //         // If paused or no game running, don't burn CPU! 
-   //         // Let the OS have the thread for a few milliseconds.
-   //         SDL_Delay(16);
-   //     }
+            if (prev_frame_data == frame_data) {
+                dupCount++;
+            }
+			prev_frame_data = frame_data;
+            if (frame_data) {
+                RenderFrame(frame_data);
+                got_new_frame = true;
+            }
+        }
+        else {
+            // If paused or no game running, don't burn CPU! 
+            // Let the OS have the thread for a few milliseconds.
+            SDL_Delay(16);
+        }
 
         frameCount++;
         uint64_t currentTick = SDL_GetPerformanceCounter();
@@ -370,14 +370,14 @@ void Core::RunMessageLoop()
                     }
                         ImGui::Separator();
                         if (ImGui::MenuItem("Save State", nullptr, false, isPlaying)) {
-                            //CommandQueue::Command cmd;
-                            //cmd.type = CommandQueue::CommandType::SAVE_STATE;
-                            //context.command_queue.Push(cmd);
+                            CommandQueue::Command cmd;
+                            cmd.type = CommandQueue::CommandType::SAVE_STATE;
+                            context.command_queue.Push(cmd);
                         }
                         if (ImGui::MenuItem("Load State", nullptr, false, isPlaying)) {
-                            //CommandQueue::Command cmd;
-                            //cmd.type = CommandQueue::CommandType::LOAD_STATE;
-                            //context.command_queue.Push(cmd);
+                            CommandQueue::Command cmd;
+                            cmd.type = CommandQueue::CommandType::LOAD_STATE;
+                            context.command_queue.Push(cmd);
                         }
                     ImGui::Separator();
                     if (ImGui::MenuItem("Exit")) shutdown = true;
@@ -385,15 +385,15 @@ void Core::RunMessageLoop()
                 }
                 if (ImGui::BeginMenu("Emulation")) {
                     if (ImGui::MenuItem("Reset", nullptr, false, isPlaying)) {
-                        //CommandQueue::Command cmd;
-                        //cmd.type = CommandQueue::CommandType::RESET;
-                        //context.command_queue.Push(cmd);
+                        CommandQueue::Command cmd;
+                        cmd.type = CommandQueue::CommandType::RESET;
+                        context.command_queue.Push(cmd);
                         isPlaying = true;
                     }
                     if (ImGui::MenuItem("Power", nullptr, false, isPlaying)) {
-                        //CommandQueue::Command cmd;
-                        //cmd.type = CommandQueue::CommandType::POWER;
-                        //context.command_queue.Push(cmd);
+                        CommandQueue::Command cmd;
+                        cmd.type = CommandQueue::CommandType::POWER;
+                        context.command_queue.Push(cmd);
                         isPlaying = true;
                     }
                     ImGui::EndMenu();
@@ -425,7 +425,7 @@ void Core::RunMessageLoop()
                     std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
                     std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
                     lastOpenedPath = filePath;
-                    //LoadGame(filePathName);
+                    LoadGame(filePathName);
                     isPaused = false;
                     updateMenu();
                 }
@@ -438,56 +438,56 @@ void Core::RunMessageLoop()
 
             // Debugger Window (CPU Registers)
             ImGui::SetNextWindowPos(ImVec2(1100, 600), ImGuiCond_FirstUseEver);
-            //if (_uiWindows.cpuOpen) {
-            //    ImGui::Begin("CPU Debugger", &_uiWindows.cpuOpen);
-            //    ImGui::Text("A: %02X", _dbgCtx->lastState.a); ImGui::SameLine();
-            //    ImGui::Text("X: %02X", _dbgCtx->lastState.x); ImGui::SameLine();
-            //    ImGui::Text("Y: %02X", _dbgCtx->lastState.y);
-            //    ImGui::Separator();
-            //    ImGui::Text("PC: %04X", _dbgCtx->lastState.pc);
-            //    ImGui::Text("SP: %02X", _dbgCtx->lastState.sp);
+            if (_uiWindows.cpuOpen) {
+                ImGui::Begin("CPU Debugger", &_uiWindows.cpuOpen);
+                ImGui::Text("A: %02X", _dbgCtx->lastState.a); ImGui::SameLine();
+                ImGui::Text("X: %02X", _dbgCtx->lastState.x); ImGui::SameLine();
+                ImGui::Text("Y: %02X", _dbgCtx->lastState.y);
+                ImGui::Separator();
+                ImGui::Text("PC: %04X", _dbgCtx->lastState.pc);
+                ImGui::Text("SP: %02X", _dbgCtx->lastState.sp);
 
-            //    ImGui::Separator();
-            //    ImGui::Text("NesPpu Flags:");
-            //    ImGui::Text("Dot: %d", _dbgCtx->ppuState.dot);
-            //    ImGui::Text("Scanline: %d", _dbgCtx->ppuState.scanline);
-            //    bool bgLeft = (_dbgCtx->ppuState.mask & NesPpuMASK_BACKGRONDLEFT) != 0;
-            //    ImGui::Checkbox("Background Mask", &bgLeft);
-            //    bool spLeft = (_dbgCtx->ppuState.mask & NesPpuMASK_SPRITELEFT) != 0;
-            //    ImGui::Checkbox("Sprite Mask", &spLeft);
+                ImGui::Separator();
+                ImGui::Text("NesPpu Flags:");
+                ImGui::Text("Dot: %d", _dbgCtx->ppuState.dot);
+                ImGui::Text("Scanline: %d", _dbgCtx->ppuState.scanline);
+                bool bgLeft = (_dbgCtx->ppuState.mask & NesPpuMASK_BACKGRONDLEFT) != 0;
+                ImGui::Checkbox("Background Mask", &bgLeft);
+                bool spLeft = (_dbgCtx->ppuState.mask & NesPpuMASK_SPRITELEFT) != 0;
+                ImGui::Checkbox("Sprite Mask", &spLeft);
 
-            //    if (_dbgCtx->hit_breakpoint.load(std::memory_order_relaxed)) {
-            //        _dbgCtx->hit_breakpoint.store(false);
-            //        debuggerUI.GoTo();
-            //    }
+                if (_dbgCtx->hit_breakpoint.load(std::memory_order_relaxed)) {
+                    _dbgCtx->hit_breakpoint.store(false);
+                    debuggerUI.GoTo();
+                }
 
-            //    bool isDebugPause = _dbgCtx->is_paused.load(std::memory_order_relaxed);
-            //    if (ImGui::Button(isDebugPause ? "Resume" : "Pause")) {
-            //        bool newPause = !isDebugPause;
-            //        if (newPause) {
-            //            _dbgCtx->is_paused.store(true);
-            //            _dbgCtx->continue_requested.store(false);
-            //            debuggerUI.ComputeDisplayMap();
-            //        }
-            //        else {
-            //            _dbgCtx->continue_requested.store(true);
-            //        }
-            //    }
-            //    ImGui::End();
-            //}
+                bool isDebugPause = _dbgCtx->is_paused.load(std::memory_order_relaxed);
+                if (ImGui::Button(isDebugPause ? "Resume" : "Pause")) {
+                    bool newPause = !isDebugPause;
+                    if (newPause) {
+                        _dbgCtx->is_paused.store(true);
+                        _dbgCtx->continue_requested.store(false);
+                        debuggerUI.ComputeDisplayMap();
+                    }
+                    else {
+                        _dbgCtx->continue_requested.store(true);
+                    }
+                }
+                ImGui::End();
+            }
 
-   //         debuggerUI.DrawScrollableDisassembler(&_uiWindows.debuggerOpen);
-   //         hexViewer.DrawMemoryViewer("Memory Viewer", &_uiWindows.hexOpen); // 64KB of addressable memory
+            debuggerUI.DrawScrollableDisassembler(&_uiWindows.debuggerOpen);
+            hexViewer.DrawMemoryViewer("Memory Viewer", &_uiWindows.hexOpen); // 64KB of addressable memory
 
-			//ppuViewer.Draw("NesPpu Viewer", &_uiWindows.ppuOpen);
+			ppuViewer.Draw("NesPpu Viewer", &_uiWindows.ppuOpen);
 
             // NES Display Window
             ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(300, 30), ImGuiCond_FirstUseEver);
             ImGui::Begin("Game View");
-            //ImGui::Text("FPS: %d, UI FPS %d, dup %d", (int)context.current_fps.load(std::memory_order_relaxed), ui_fps, dupCount);
+            ImGui::Text("FPS: %d, UI FPS %d, dup %d", (int)context.current_fps.load(std::memory_order_relaxed), ui_fps, dupCount);
 
-            //DrawGameCentered();
+            DrawGameCentered();
             ImGui::End();
         }
 
@@ -504,7 +504,7 @@ void Core::RunMessageLoop()
             SDL_GL_SwapWindow(window);
         }
     }
-    //emulator.stop();
+    emulator.stop();
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
