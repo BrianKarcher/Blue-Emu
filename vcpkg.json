@@ -1,0 +1,9 @@
+{
+  "name": "nes-emu",
+  "version": "0.1.0",
+  "builtin-baseline": "8cef5dcb6d18ec61b37251b509972c1fdf6fc63e",
+  "dependencies": [
+    "sdl2",
+    "libzip"
+  ]
+}
