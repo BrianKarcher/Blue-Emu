@@ -30,7 +30,39 @@ target_include_directories(imgui PUBLIC
 
 target_link_libraries(imgui PUBLIC SDL2::SDL2 OpenGL::GL)
 
-add_executable(nes_emu src/main.cpp src/Core.cpp)
+set(SHARED_DIR ${CMAKE_SOURCE_DIR}/src/core/shared)
+set(NES_DIR ${CMAKE_SOURCE_DIR}/src/core/nes)
+set(MAPPERS_DIR ${CMAKE_SOURCE_DIR}/src/core/nes/mappers)
+
+add_executable(nes_emu
+src/main.cpp
+src/Core.cpp
+${SHARED_DIR}/AudioBackend.cpp
+${SHARED_DIR}/EmulatorCore.cpp
+${SHARED_DIR}/Serializer.cpp
+${SHARED_DIR}/SharedContext.cpp
+${MAPPERS_DIR}/AxROMMapper.cpp
+${MAPPERS_DIR}/CNROM.cpp
+${MAPPERS_DIR}/DxROM.cpp
+${MAPPERS_DIR}/Mapper.cpp
+${MAPPERS_DIR}/MapperBase.cpp
+${MAPPERS_DIR}/MMC1.cpp
+${MAPPERS_DIR}/MMC2Mapper.cpp
+${MAPPERS_DIR}/MMC3.cpp
+${MAPPERS_DIR}/NROM.cpp
+${MAPPERS_DIR}/UxROMMapper.cpp
+${NES_DIR}/DebuggerContext.cpp
+${NES_DIR}/INESLoader.cpp
+${NES_DIR}/InputMappers.cpp
+${NES_DIR}/Nes.cpp
+${NES_DIR}/NesAudioMapper.cpp
+${NES_DIR}/NesBus.cpp
+${NES_DIR}/NesCartridge.cpp
+${NES_DIR}/NesCpu.cpp
+${NES_DIR}/NesInput.cpp
+${NES_DIR}/NesPpu.cpp
+${NES_DIR}/RendererLoopy.cpp
+)
 
 target_link_libraries(nes_emu PRIVATE
     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
@@ -38,6 +70,16 @@ target_link_libraries(nes_emu PRIVATE
     imgui
     libzip::zip
     OpenGL::GL
+)
+
+# Add include directory for this target
+target_include_directories(nes_emu
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/core
+        ${CMAKE_SOURCE_DIR}/src/core/shared
+        ${CMAKE_SOURCE_DIR}/src/core/nes
+        ${CMAKE_SOURCE_DIR}/src/core/nes/mappers
 )
 
 if(APPLE)
