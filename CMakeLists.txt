@@ -9,11 +9,33 @@ find_package(SDL2   CONFIG REQUIRED)
 find_package(libzip CONFIG REQUIRED)
 find_package(OpenGL        REQUIRED)
 
+# ── ImGui (vendored) ──────────────────────────────────────────────────────────
+set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/third_party/imgui)
+
+add_library(imgui STATIC
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+    ${IMGUI_DIR}/file/ImGuiFileDialog.cpp
+)
+
+target_include_directories(imgui PUBLIC
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
+    ${IMGUI_DIR}/file
+)
+
+target_link_libraries(imgui PUBLIC SDL2::SDL2 OpenGL::GL)
+
 add_executable(nes_emu src/main.cpp)
 
 target_link_libraries(nes_emu PRIVATE
     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
     SDL2::SDL2
+    imgui
     libzip::zip
     OpenGL::GL
 )
