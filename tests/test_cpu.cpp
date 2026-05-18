@@ -972,6 +972,315 @@ namespace BlueNESTest
 		EXPECT_EQ(cpu->GetCycleCount(), 2);
 	}
 
+	TEST_F(MyEnv, TestCMPImmediate)
+	{
+		uint8_t rom[] = { CMP_IMMEDIATE, 0x30 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetA(0x40);
+		RunInst();
+		// A (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestCMPZeroPage)
+	{
+		// Add what is at zero page 0x15 to A.
+		uint8_t rom[] = { CMP_ZEROPAGE, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0015, 0x30);
+		cpu->SetA(0x40);
+		RunInst();
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 3);
+	}
+
+	TEST_F(MyEnv, TestCMPZeroPageX)
+	{
+		// Add what is at zero page 0x15 to A.
+		uint8_t rom[] = { CMP_ZEROPAGE_X, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0016, 0x30);
+		cpu->SetX(0x1);
+		cpu->SetA(0x40);
+		RunInst();
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestCMPAbsolute)
+	{
+		uint8_t rom[] = { CMP_ABSOLUTE, 0x15, 0x12 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x1215, 0x30);
+		cpu->SetA(0x40);
+		RunInst();
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestCMPAbsoluteX)
+	{
+		uint8_t rom[] = { CMP_ABSOLUTE_X, 0x14, 0x12 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x1215, 0x30);
+		cpu->SetX(0x1);
+		cpu->SetA(0x40);
+		RunInst();
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestCMPAbsoluteY)
+	{
+		uint8_t rom[] = { CMP_ABSOLUTE_Y, 0x14, 0x12 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x1215, 0x30);
+		cpu->SetY(0x1);
+		cpu->SetA(0x40);
+		RunInst();
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestCMPIndexedIndirect)
+	{
+		bus->write(0x0035, 0x35);
+		bus->write(0x0036, 0x12); // Pointer to 0x1235
+		bus->write(0x1235, 0x30);
+		uint8_t rom[] = { CMP_INDEXEDINDIRECT, 0x33 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetX(0x2);
+		cpu->SetA(0x40);
+		RunInst();
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 6);
+	}
+
+	TEST_F(MyEnv, TestCMPIndirectIndexed)
+	{
+		bus->write(0x0035, 0x35);
+		bus->write(0x0036, 0x12); // Pointer to 0x1235
+		bus->write(0x1237, 0x30);
+		uint8_t rom[] = { CMP_INDIRECTINDEXED, 0x35 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetY(0x2);
+		cpu->SetA(0x40);
+		RunInst();
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 5);
+	}
+
+	TEST_F(MyEnv, TestCPXImmediate)
+	{
+		uint8_t rom[] = { CPX_IMMEDIATE, 0x30 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetX(0x40);
+		RunInst();
+		// X (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestCPXZeroPage)
+	{
+		uint8_t rom[] = { CPX_ZEROPAGE, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0015, 0x30);
+		cpu->SetX(0x40);
+		RunInst();
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 3);
+	}
+
+	TEST_F(MyEnv, TestCPXAbsolute)
+	{
+		uint8_t rom[] = { CPX_ABSOLUTE, 0x15, 0x12 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x1215, 0x30);
+		cpu->SetX(0x40);
+		RunInst();
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestCPYImmediate)
+	{
+		uint8_t rom[] = { CPY_IMMEDIATE, 0x30 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetY(0x40);
+		RunInst();
+		// Y (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestCPYZeroPage)
+	{
+		uint8_t rom[] = { CPY_ZEROPAGE, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0015, 0x30);
+		cpu->SetY(0x40);
+		RunInst();
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 3);
+	}
+
+	TEST_F(MyEnv, TestCPYAbsolute)
+	{
+		uint8_t rom[] = { CPY_ABSOLUTE, 0x15, 0x12 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x1215, 0x30);
+		cpu->SetY(0x40);
+		RunInst();
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestDECZeroPage)
+	{
+		uint8_t rom[] = { DEC_ZEROPAGE, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0015, 0x30);
+		RunInst();
+		EXPECT_EQ(bus->read(0x0015), 0x2F);
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 5);
+	}
+
+	TEST_F(MyEnv, TestDECZeroPageZeroResult)
+	{
+		uint8_t rom[] = { DEC_ZEROPAGE, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0015, 0x01);
+		RunInst();
+		EXPECT_EQ(bus->read(0x0015), 0x00);
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_EQ(cpu->GetCycleCount(), 5);
+	}
+
+	TEST_F(MyEnv, TestDECZeroPageX)
+	{
+		uint8_t rom[] = { DEC_ZEROPAGE_X, 0x14 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0015, 0x30);
+		cpu->SetX(0x1);
+		RunInst();
+		EXPECT_EQ(bus->read(0x0015), 0x2F);
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_EQ(cpu->GetCycleCount(), 6);
+	}
+
+	TEST_F(MyEnv, TestDECAbsolute)
+	{
+		uint8_t rom[] = { DEC_ABSOLUTE, 0x15, 0x12 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x1215, 0x30);
+		RunInst();
+		EXPECT_EQ(bus->read(0x1215), 0x2F);
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_EQ(cpu->GetCycleCount(), 6);
+	}
+
+	TEST_F(MyEnv, TestDECAbsoluteX)
+	{
+		uint8_t rom[] = { DEC_ABSOLUTE_X, 0x14, 0x12 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x1215, 0x30);
+		cpu->SetX(0x1);
+		RunInst();
+		EXPECT_EQ(bus->read(0x1215), 0x2F);
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_EQ(cpu->GetCycleCount(), 7);
+	}
+
+	TEST_F(MyEnv, TestDEXImplied)
+	{
+		uint8_t rom[] = { DEX_IMPLIED  };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetX(0x01);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x00, cpu->GetX());
+		EXPECT_TRUE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestDEYImplied)
+	{
+		uint8_t rom[] = { DEY_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetY(0x01);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x00, cpu->GetY());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
     int main(int argc, char** argv)
     {
         ::testing::InitGoogleTest(&argc, argv);
@@ -1008,268 +1317,9 @@ namespace BlueNESTest
 
 //
 //
-//		TEST_F(MyEnv, TestCMPImmediate)
-//		{
-//			uint8_t rom[] = { CMP_IMMEDIATE, 0x30 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetA(0x40);
-//			RunInst();
-//			// A (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//		TEST_F(MyEnv, TestCMPZeroPage)
-//		{
-//			// Add what is at zero page 0x15 to A.
-//			uint8_t rom[] = { CMP_ZEROPAGE, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0015, 0x30);
-//			cpu->SetA(0x40);
-//			RunInst();
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//		TEST_F(MyEnv, TestCMPZeroPageX)
-//		{
-//			// Add what is at zero page 0x15 to A.
-//			uint8_t rom[] = { CMP_ZEROPAGE_X, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0016, 0x30);
-//			cpu->SetX(0x1);
-//			cpu->SetA(0x40);
-//			RunInst();
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//		TEST_F(MyEnv, TestCMPAbsolute)
-//		{
-//			uint8_t rom[] = { CMP_ABSOLUTE, 0x15, 0x12 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x1215, 0x30);
-//			cpu->SetA(0x40);
-//			RunInst();
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//		TEST_F(MyEnv, TestCMPAbsoluteX)
-//		{
-//			uint8_t rom[] = { CMP_ABSOLUTE_X, 0x14, 0x12 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x1215, 0x30);
-//			cpu->SetX(0x1);
-//			cpu->SetA(0x40);
-//			RunInst();
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//		TEST_F(MyEnv, TestCMPAbsoluteY)
-//		{
-//			uint8_t rom[] = { CMP_ABSOLUTE_Y, 0x14, 0x12 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x1215, 0x30);
-//			cpu->SetY(0x1);
-//			cpu->SetA(0x40);
-//			RunInst();
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//		TEST_F(MyEnv, TestCMPIndexedIndirect)
-//		{
-//			bus->write(0x0035, 0x35);
-//			bus->write(0x0036, 0x12); // Pointer to 0x1235
-//			bus->write(0x1235, 0x30);
-//			uint8_t rom[] = { CMP_INDEXEDINDIRECT, 0x33 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetX(0x2);
-//			cpu->SetA(0x40);
-//			RunInst();
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 6);
-//		}
-//		TEST_F(MyEnv, TestCMPIndirectIndexed)
-//		{
-//			bus->write(0x0035, 0x35);
-//			bus->write(0x0036, 0x12); // Pointer to 0x1235
-//			bus->write(0x1237, 0x30);
-//			uint8_t rom[] = { CMP_INDIRECTINDEXED, 0x35 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetY(0x2);
-//			cpu->SetA(0x40);
-//			RunInst();
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 5);
-//		}
+
 //
-//		TEST_F(MyEnv, TestCPXImmediate)
-//		{
-//			uint8_t rom[] = { CPX_IMMEDIATE, 0x30 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetX(0x40);
-//			RunInst();
-//			// X (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//		TEST_F(MyEnv, TestCPXZeroPage)
-//		{
-//			uint8_t rom[] = { CPX_ZEROPAGE, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0015, 0x30);
-//			cpu->SetX(0x40);
-//			RunInst();
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//		TEST_F(MyEnv, TestCPXAbsolute)
-//		{
-//			uint8_t rom[] = { CPX_ABSOLUTE, 0x15, 0x12 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x1215, 0x30);
-//			cpu->SetX(0x40);
-//			RunInst();
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//
-//		TEST_F(MyEnv, TestCPYImmediate)
-//		{
-//			uint8_t rom[] = { CPY_IMMEDIATE, 0x30 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetY(0x40);
-//			RunInst();
-//			// Y (0x40) > M (0x30), so Carry should be set, Zero clear, Negative clear
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//		TEST_F(MyEnv, TestCPYZeroPage)
-//		{
-//			uint8_t rom[] = { CPY_ZEROPAGE, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0015, 0x30);
-//			cpu->SetY(0x40);
-//			RunInst();
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//		TEST_F(MyEnv, TestCPYAbsolute)
-//		{
-//			uint8_t rom[] = { CPY_ABSOLUTE, 0x15, 0x12 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x1215, 0x30);
-//			cpu->SetY(0x40);
-//			RunInst();
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//
-//		TEST_F(MyEnv, TestDECZeroPage)
-//		{
-//			uint8_t rom[] = { DEC_ZEROPAGE, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0015, 0x30);
-//			RunInst();
-//			Assert::IsTrue(bus->read(0x0015) == 0x2F);
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 5);
-//		}
-//		TEST_F(MyEnv, TestDECZeroPageZeroResult)
-//		{
-//			uint8_t rom[] = { DEC_ZEROPAGE, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0015, 0x01);
-//			RunInst();
-//			Assert::IsTrue(bus->read(0x0015) == 0x00);
-//			Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 5);
-//		}
-//		TEST_F(MyEnv, TestDECZeroPageX)
-//		{
-//			uint8_t rom[] = { DEC_ZEROPAGE_X, 0x14 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0015, 0x30);
-//			cpu->SetX(0x1);
-//			RunInst();
-//			Assert::IsTrue(bus->read(0x0015) == 0x2F);
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 6);
-//		}
-//		TEST_F(MyEnv, TestDECAbsolute)
-//		{
-//			uint8_t rom[] = { DEC_ABSOLUTE, 0x15, 0x12 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x1215, 0x30);
-//			RunInst();
-//			Assert::IsTrue(bus->read(0x1215) == 0x2F);
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 6);
-//		}
-//		TEST_F(MyEnv, TestDECAbsoluteX)
-//		{
-//			uint8_t rom[] = { DEC_ABSOLUTE_X, 0x14, 0x12 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x1215, 0x30);
-//			cpu->SetX(0x1);
-//			RunInst();
-//			Assert::IsTrue(bus->read(0x1215) == 0x2F);
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 7);
-//		}
-//
-//		TEST_F(MyEnv, TestDEXImplied)
-//		{
-//			uint8_t rom[] = { DEX_IMPLIED  };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetX(0x01);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x00, cpu->GetX());
-//			Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//		TEST_F(MyEnv, TestDEYImplied)
-//		{
-//			uint8_t rom[] = { DEY_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetY(0x01);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x00, cpu->GetY());
-//			Assert::IsTrue(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
+
 //
 //
 //		TEST_F(MyEnv, TestEORImmediate)
