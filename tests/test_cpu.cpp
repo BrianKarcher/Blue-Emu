@@ -863,6 +863,115 @@ namespace BlueNESTest
 		EXPECT_EQ(cpu->GetCycleCount(), 2);
 	}
 
+	TEST_F(MyEnv, TestBRKImplied)
+	{
+		// ROM needs to be large enough to store the reset vector.
+		uint8_t rom[0x8000];
+		rom[0] = BRK_IMPLIED;
+		rom[1] = NOP_IMPLIED;
+		rom[2] = NOP_IMPLIED;
+		rom[3] = NOP_IMPLIED;
+		uint8_t lo = 0x88;
+		uint8_t hi = 0x80;
+		rom[0xFFFE - 0x8000] = lo;
+		rom[0xFFFF - 0x8000] = hi;
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+
+		cpu->ClearFlag(FLAG_INTERRUPT);
+		cpu->SetPC(0x8000);
+		RunInst();
+		// After clocking BRK, PC should be at the IRQ vector address stored at 0xFFFE/F
+		uint16_t irqVector = (hi << 8) | lo;
+		EXPECT_EQ(irqVector, cpu->GetPC());
+		// Also check that the Interrupt flag is set
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_EQ(cpu->GetCycleCount(), 7);
+	}
+
+	TEST_F(MyEnv, TestBVCRelative)
+	{
+		uint8_t rom[] = { BVC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->ClearFlag(FLAG_OVERFLOW); // Clear overflow to take branch
+		RunInst();
+		// After clocking BVC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+		EXPECT_EQ((uint16_t)0x8007, cpu->GetPC());
+		EXPECT_EQ(3, cpu->GetCycleCount());
+	}
+
+	TEST_F(MyEnv, TestBVCRelativeNotTaken)
+	{
+		uint8_t rom[] = { BVC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetFlag(FLAG_OVERFLOW); // Set overflow to not take branch
+		RunInst();
+		// After clocking BVC, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+		EXPECT_EQ((uint16_t)0x8002, cpu->GetPC());
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestBVSRelative)
+	{
+		uint8_t rom[] = { BVS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetFlag(FLAG_OVERFLOW); // Set overflow to take branch
+		RunInst();
+		// After clocking BVS, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+		EXPECT_EQ((uint16_t)0x8007, cpu->GetPC());
+		EXPECT_EQ(cpu->GetCycleCount(), 3);
+	}
+
+	TEST_F(MyEnv, TestBVSRelativeNotTaken)
+	{
+		uint8_t rom[] = { BVS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->ClearFlag(FLAG_OVERFLOW); // Clear overflow to not take branch
+		RunInst();
+		// After clocking BVS, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+		EXPECT_EQ((uint16_t)0x8002, cpu->GetPC());
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestCLCImplied)
+	{
+		uint8_t rom[] = { CLC_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetFlag(FLAG_CARRY); // Set carry flag
+		RunInst();
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY)); // Carry flag should be cleared
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestCLDImplied)
+	{
+		uint8_t rom[] = { CLD_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetFlag(FLAG_DECIMAL); // Set decimal flag
+		RunInst();
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL)); // Decimal flag should be cleared
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestCLIImplied)
+	{
+		uint8_t rom[] = { CLI_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetFlag(FLAG_INTERRUPT); // Set interrupt flag
+		RunInst();
+		EXPECT_FALSE(cpu->GetFlag(FLAG_INTERRUPT)); // Interrupt flag should be cleared
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestCLVImplied)
+	{
+		uint8_t rom[] = { CLV_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetFlag(FLAG_OVERFLOW); // Set overflow flag
+		RunInst();
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW)); // Overflow flag should be cleared
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
     int main(int argc, char** argv)
     {
         ::testing::InitGoogleTest(&argc, argv);
@@ -896,110 +1005,10 @@ namespace BlueNESTest
 //
 
 //
-//		TEST_METHOD(TestBRKImplied)
-//		{
-//			// ROM needs to be large enough to store the reset vector.
-//			uint8_t rom[0x8000];
-//			rom[0] = BRK_IMPLIED;
-//			rom[1] = NOP_IMPLIED;
-//			rom[2] = NOP_IMPLIED;
-//			rom[3] = NOP_IMPLIED;
-//			uint8_t lo = 0x88;
-//			uint8_t hi = 0x80;
-//			rom[0xFFFE - 0x8000] = lo;
-//			rom[0xFFFF - 0x8000] = hi;
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//
-//			cpu->SetPC(0x8000);
-//			RunInst();
-//			// After clocking BRK, PC should be at the IRQ vector address stored at 0xFFFE/F
-//			uint16_t irqVector = (hi << 8) | lo;
-//			Assert::AreEqual(irqVector, cpu->GetPC());
-//			// Also check that the Interrupt flag is set
-//			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-//			Assert::IsTrue(cpu->GetCycleCount() == 7);
-//		}
-//
-//		TEST_METHOD(TestBVCRelative)
-//		{
-//			uint8_t rom[] = { BVC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->ClearFlag(FLAG_OVERFLOW); // Clear overflow to take branch
-//			RunInst();
-//			// After clocking BVC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
-//			Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//		TEST_METHOD(TestBVCRelativeNotTaken)
-//		{
-//			uint8_t rom[] = { BVC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetFlag(FLAG_OVERFLOW); // Set overflow to not take branch
-//			RunInst();
-//			// After clocking BVC, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
-//			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//		TEST_METHOD(TestBVSRelative)
-//		{
-//			uint8_t rom[] = { BVS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetFlag(FLAG_OVERFLOW); // Set overflow to take branch
-//			RunInst();
-//			// After clocking BVS, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
-//			Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//		TEST_METHOD(TestBVSRelativeNotTaken)
-//		{
-//			uint8_t rom[] = { BVS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->ClearFlag(FLAG_OVERFLOW); // Clear overflow to not take branch
-//			RunInst();
-//			// After clocking BVS, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
-//			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//
-//		TEST_METHOD(TestCLCImplied)
-//		{
-//			uint8_t rom[] = { CLC_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetFlag(FLAG_CARRY); // Set carry flag
-//			RunInst();
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY)); // Carry flag should be cleared
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//		TEST_METHOD(TestCLDImplied)
-//		{
-//			uint8_t rom[] = { CLD_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetFlag(FLAG_DECIMAL); // Set decimal flag
-//			RunInst();
-//			Assert::IsFalse(cpu->GetFlag(FLAG_DECIMAL)); // Decimal flag should be cleared
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//		TEST_METHOD(TestCLIImplied)
-//		{
-//			uint8_t rom[] = { CLI_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetFlag(FLAG_INTERRUPT); // Set interrupt flag
-//			RunInst();
-//			Assert::IsFalse(cpu->GetFlag(FLAG_INTERRUPT)); // Interrupt flag should be cleared
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//		TEST_METHOD(TestCLVImplied)
-//		{
-//			uint8_t rom[] = { CLV_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetFlag(FLAG_OVERFLOW); // Set overflow flag
-//			RunInst();
-//			Assert::IsFalse(cpu->GetFlag(FLAG_OVERFLOW)); // Overflow flag should be cleared
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
+
 //
 //
-//		TEST_METHOD(TestCMPImmediate)
+//		TEST_F(MyEnv, TestCMPImmediate)
 //		{
 //			uint8_t rom[] = { CMP_IMMEDIATE, 0x30 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1011,7 +1020,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestCMPZeroPage)
+//		TEST_F(MyEnv, TestCMPZeroPage)
 //		{
 //			// Add what is at zero page 0x15 to A.
 //			uint8_t rom[] = { CMP_ZEROPAGE, 0x15 };
@@ -1024,7 +1033,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestCMPZeroPageX)
+//		TEST_F(MyEnv, TestCMPZeroPageX)
 //		{
 //			// Add what is at zero page 0x15 to A.
 //			uint8_t rom[] = { CMP_ZEROPAGE_X, 0x15 };
@@ -1038,7 +1047,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestCMPAbsolute)
+//		TEST_F(MyEnv, TestCMPAbsolute)
 //		{
 //			uint8_t rom[] = { CMP_ABSOLUTE, 0x15, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1050,7 +1059,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestCMPAbsoluteX)
+//		TEST_F(MyEnv, TestCMPAbsoluteX)
 //		{
 //			uint8_t rom[] = { CMP_ABSOLUTE_X, 0x14, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1063,7 +1072,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestCMPAbsoluteY)
+//		TEST_F(MyEnv, TestCMPAbsoluteY)
 //		{
 //			uint8_t rom[] = { CMP_ABSOLUTE_Y, 0x14, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1076,7 +1085,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestCMPIndexedIndirect)
+//		TEST_F(MyEnv, TestCMPIndexedIndirect)
 //		{
 //			bus->write(0x0035, 0x35);
 //			bus->write(0x0036, 0x12); // Pointer to 0x1235
@@ -1091,7 +1100,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestCMPIndirectIndexed)
+//		TEST_F(MyEnv, TestCMPIndirectIndexed)
 //		{
 //			bus->write(0x0035, 0x35);
 //			bus->write(0x0036, 0x12); // Pointer to 0x1235
@@ -1107,7 +1116,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
 //
-//		TEST_METHOD(TestCPXImmediate)
+//		TEST_F(MyEnv, TestCPXImmediate)
 //		{
 //			uint8_t rom[] = { CPX_IMMEDIATE, 0x30 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1119,7 +1128,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestCPXZeroPage)
+//		TEST_F(MyEnv, TestCPXZeroPage)
 //		{
 //			uint8_t rom[] = { CPX_ZEROPAGE, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1131,7 +1140,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestCPXAbsolute)
+//		TEST_F(MyEnv, TestCPXAbsolute)
 //		{
 //			uint8_t rom[] = { CPX_ABSOLUTE, 0x15, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1144,7 +1153,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
 //
-//		TEST_METHOD(TestCPYImmediate)
+//		TEST_F(MyEnv, TestCPYImmediate)
 //		{
 //			uint8_t rom[] = { CPY_IMMEDIATE, 0x30 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1156,7 +1165,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestCPYZeroPage)
+//		TEST_F(MyEnv, TestCPYZeroPage)
 //		{
 //			uint8_t rom[] = { CPY_ZEROPAGE, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1168,7 +1177,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestCPYAbsolute)
+//		TEST_F(MyEnv, TestCPYAbsolute)
 //		{
 //			uint8_t rom[] = { CPY_ABSOLUTE, 0x15, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1181,7 +1190,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
 //
-//		TEST_METHOD(TestDECZeroPage)
+//		TEST_F(MyEnv, TestDECZeroPage)
 //		{
 //			uint8_t rom[] = { DEC_ZEROPAGE, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1192,7 +1201,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
-//		TEST_METHOD(TestDECZeroPageZeroResult)
+//		TEST_F(MyEnv, TestDECZeroPageZeroResult)
 //		{
 //			uint8_t rom[] = { DEC_ZEROPAGE, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1203,7 +1212,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
-//		TEST_METHOD(TestDECZeroPageX)
+//		TEST_F(MyEnv, TestDECZeroPageX)
 //		{
 //			uint8_t rom[] = { DEC_ZEROPAGE_X, 0x14 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1215,7 +1224,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestDECAbsolute)
+//		TEST_F(MyEnv, TestDECAbsolute)
 //		{
 //			uint8_t rom[] = { DEC_ABSOLUTE, 0x15, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1226,7 +1235,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestDECAbsoluteX)
+//		TEST_F(MyEnv, TestDECAbsoluteX)
 //		{
 //			uint8_t rom[] = { DEC_ABSOLUTE_X, 0x14, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1239,7 +1248,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 7);
 //		}
 //
-//		TEST_METHOD(TestDEXImplied)
+//		TEST_F(MyEnv, TestDEXImplied)
 //		{
 //			uint8_t rom[] = { DEX_IMPLIED  };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1250,7 +1259,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestDEYImplied)
+//		TEST_F(MyEnv, TestDEYImplied)
 //		{
 //			uint8_t rom[] = { DEY_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1263,7 +1272,7 @@ namespace BlueNESTest
 //		}
 //
 //
-//		TEST_METHOD(TestEORImmediate)
+//		TEST_F(MyEnv, TestEORImmediate)
 //		{
 //			uint8_t rom[] = { EOR_IMMEDIATE, 0xAA }; // 1010 1010
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1275,7 +1284,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestEORZeroPage)
+//		TEST_F(MyEnv, TestEORZeroPage)
 //		{
 //			uint8_t rom[] = { EOR_ZEROPAGE, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1287,7 +1296,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestEORZeroPageX)
+//		TEST_F(MyEnv, TestEORZeroPageX)
 //		{
 //			uint8_t rom[] = { EOR_ZEROPAGE_X, 0x14 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1300,7 +1309,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestEORAbsolute)
+//		TEST_F(MyEnv, TestEORAbsolute)
 //		{
 //			uint8_t rom[] = { EOR_ABSOLUTE, 0x15, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1312,7 +1321,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestEORAbsoluteX)
+//		TEST_F(MyEnv, TestEORAbsoluteX)
 //		{
 //			uint8_t rom[] = { EOR_ABSOLUTE_X, 0x14, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1325,7 +1334,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestEORAbsoluteY)
+//		TEST_F(MyEnv, TestEORAbsoluteY)
 //		{
 //			uint8_t rom[] = { EOR_ABSOLUTE_Y, 0x14, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1338,7 +1347,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestEORIndexedIndirect)
+//		TEST_F(MyEnv, TestEORIndexedIndirect)
 //		{
 //			bus->write(0x0035, 0x35);
 //			bus->write(0x0036, 0x12); // Pointer to 0x1235
@@ -1353,7 +1362,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestEORIndirectIndexed)
+//		TEST_F(MyEnv, TestEORIndirectIndexed)
 //		{
 //			bus->write(0x0035, 0x35);
 //			bus->write(0x0036, 0x12); // Pointer to 0x1235
@@ -1369,7 +1378,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
 //
-//		TEST_METHOD(TestINCZeroPage)
+//		TEST_F(MyEnv, TestINCZeroPage)
 //		{
 //			uint8_t rom[] = { INC_ZEROPAGE, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1380,7 +1389,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
-//		TEST_METHOD(TestINCZeroPageX)
+//		TEST_F(MyEnv, TestINCZeroPageX)
 //		{
 //			uint8_t rom[] = { INC_ZEROPAGE_X, 0x14 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1392,7 +1401,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestINCAbsolute)
+//		TEST_F(MyEnv, TestINCAbsolute)
 //		{
 //			uint8_t rom[] = { INC_ABSOLUTE, 0x15, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1403,7 +1412,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestINCAbsoluteX)
+//		TEST_F(MyEnv, TestINCAbsoluteX)
 //		{
 //			uint8_t rom[] = { INC_ABSOLUTE_X, 0x14, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1416,7 +1425,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 7);
 //		}
 //
-//		TEST_METHOD(TestINXImplied)
+//		TEST_F(MyEnv, TestINXImplied)
 //		{
 //			uint8_t rom[] = { INX_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1427,7 +1436,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestINYImplied)
+//		TEST_F(MyEnv, TestINYImplied)
 //		{
 //			uint8_t rom[] = { INY_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1439,7 +1448,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
 //
-//		TEST_METHOD(TestJMPAbsolute)
+//		TEST_F(MyEnv, TestJMPAbsolute)
 //		{
 //			uint8_t rom[] = { JMP_ABSOLUTE, 0x00, 0x90 }; // Jump to 0x9000
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1447,7 +1456,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestJMPIndirect)
+//		TEST_F(MyEnv, TestJMPIndirect)
 //		{
 //			bus->write(0x10FF, 0x00); // Low byte of jump address
 //			bus->write(0x1000, 0x90); // High byte of jump address (note the page boundary wraparound)
@@ -1457,7 +1466,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
-//		TEST_METHOD(TestJMPIndirectNoBug)
+//		TEST_F(MyEnv, TestJMPIndirectNoBug)
 //		{
 //			bus->write(0x10F0, 0x00); // Low byte of jump address
 //			bus->write(0x10F1, 0x90); // High byte of jump address
@@ -1468,7 +1477,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
 //
-//		TEST_METHOD(TestJSRAbsolute)
+//		TEST_F(MyEnv, TestJSRAbsolute)
 //		{
 //			uint8_t rom[] = { JSR_ABSOLUTE, 0x05, 0x80, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1484,7 +1493,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
 //
-//		TEST_METHOD(TestLDAAbsolute)
+//		TEST_F(MyEnv, TestLDAAbsolute)
 //		{
 //			uint8_t rom[] = { LDA_ABSOLUTE, 0x10, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1495,7 +1504,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestLDAAbsoluteX)
+//		TEST_F(MyEnv, TestLDAAbsoluteX)
 //		{
 //			uint8_t rom[] = { LDA_ABSOLUTE_X, 0x0F, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1510,7 +1519,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
 //
-//		TEST_METHOD(TestLDAAbsoluteXPageCross)
+//		TEST_F(MyEnv, TestLDAAbsoluteXPageCross)
 //		{
 //			uint8_t rom[] = { LDA_ABSOLUTE_X, 0x0F, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1524,7 +1533,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
-//		TEST_METHOD(TestLDAAbsoluteY)
+//		TEST_F(MyEnv, TestLDAAbsoluteY)
 //		{
 //			uint8_t rom[] = { LDA_ABSOLUTE_Y, 0x0F, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1536,7 +1545,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestLDAImmediate)
+//		TEST_F(MyEnv, TestLDAImmediate)
 //		{
 //			uint8_t rom[] = { LDA_IMMEDIATE, 0x42 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1546,7 +1555,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestLDAIndexedIndirect)
+//		TEST_F(MyEnv, TestLDAIndexedIndirect)
 //		{
 //			bus->write(0x0020, 0x40);
 //			bus->write(0x0021, 0x12); // Pointer to 0x1240
@@ -1560,7 +1569,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestLDAIndirectIndexed)
+//		TEST_F(MyEnv, TestLDAIndirectIndexed)
 //		{
 //			bus->write(0x0020, 0x40);
 //			bus->write(0x0021, 0x12); // Pointer to 0x1240
@@ -1574,7 +1583,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
-//		TEST_METHOD(TestLDAZeroPage)
+//		TEST_F(MyEnv, TestLDAZeroPage)
 //		{
 //			uint8_t rom[] = { LDA_ZEROPAGE, 0x10 };
 //			cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
@@ -1587,7 +1596,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestLDAZeroPageX)
+//		TEST_F(MyEnv, TestLDAZeroPageX)
 //		{
 //			uint8_t rom[] = { LDA_ZEROPAGE_X, 0x10 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1600,7 +1609,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
 //
-//		TEST_METHOD(TestLDXImmediate)
+//		TEST_F(MyEnv, TestLDXImmediate)
 //		{
 //			uint8_t rom[] = { LDX_IMMEDIATE, 0x55  };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1610,7 +1619,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestLDXZeroPage)
+//		TEST_F(MyEnv, TestLDXZeroPage)
 //		{
 //			uint8_t rom[] = { LDX_ZEROPAGE, 0x20 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1621,7 +1630,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestLDXZeroPageY)
+//		TEST_F(MyEnv, TestLDXZeroPageY)
 //		{
 //			uint8_t rom[] = { LDX_ZEROPAGE_Y, 0x1F };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1633,7 +1642,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestLDXAbsolute)
+//		TEST_F(MyEnv, TestLDXAbsolute)
 //		{
 //			uint8_t rom[] = { LDX_ABSOLUTE, 0x30, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1644,7 +1653,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestLDXAbsoluteY)
+//		TEST_F(MyEnv, TestLDXAbsoluteY)
 //		{
 //			uint8_t rom[] = { LDX_ABSOLUTE_Y, 0x2F, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1656,7 +1665,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestLDYImmediate)
+//		TEST_F(MyEnv, TestLDYImmediate)
 //		{
 //			uint8_t rom[] = { LDY_IMMEDIATE, 0x55 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1666,7 +1675,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestLDYZeroPage)
+//		TEST_F(MyEnv, TestLDYZeroPage)
 //		{
 //			uint8_t rom[] = { LDY_ZEROPAGE, 0x20 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1677,7 +1686,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestLDYZeroPageX)
+//		TEST_F(MyEnv, TestLDYZeroPageX)
 //		{
 //			uint8_t rom[] = { LDY_ZEROPAGE_X, 0x1F };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1689,7 +1698,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestLDYAbsolute)
+//		TEST_F(MyEnv, TestLDYAbsolute)
 //		{
 //			uint8_t rom[] = { LDY_ABSOLUTE, 0x30, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1700,7 +1709,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestLDYAbsoluteX)
+//		TEST_F(MyEnv, TestLDYAbsoluteX)
 //		{
 //			uint8_t rom[] = { LDY_ABSOLUTE_X, 0x2F, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1713,7 +1722,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
 //
-//		TEST_METHOD(TestLSRAccumulator)
+//		TEST_F(MyEnv, TestLSRAccumulator)
 //		{
 //			uint8_t rom[] = { LSR_ACCUMULATOR };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1725,7 +1734,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestLSRZeroPage)
+//		TEST_F(MyEnv, TestLSRZeroPage)
 //		{
 //			uint8_t rom[] = { LSR_ZEROPAGE, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1737,7 +1746,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
-//		TEST_METHOD(TestLSRZeroPageX)
+//		TEST_F(MyEnv, TestLSRZeroPageX)
 //		{
 //			uint8_t rom[] = { LSR_ZEROPAGE_X, 0x14 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1750,7 +1759,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestLSRAbsolute)
+//		TEST_F(MyEnv, TestLSRAbsolute)
 //		{
 //			uint8_t rom[] = { LSR_ABSOLUTE, 0x15, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1762,7 +1771,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestLSRAbsoluteX)
+//		TEST_F(MyEnv, TestLSRAbsoluteX)
 //		{
 //			uint8_t rom[] = { LSR_ABSOLUTE_X, 0x14, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1776,7 +1785,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 7);
 //		}
 //
-//		TEST_METHOD(TestNOPImmediate)
+//		TEST_F(MyEnv, TestNOPImmediate)
 //		{
 //			uint8_t rom[] = { NOP_IMPLIED, 0x00 }; // 0000 1111
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1786,7 +1795,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
 //
-//		TEST_METHOD(TestORAImmediate)
+//		TEST_F(MyEnv, TestORAImmediate)
 //		{
 //			uint8_t rom[] = { ORA_IMMEDIATE, 0x0F }; // 0000 1111
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1798,7 +1807,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestORAZeroPage)
+//		TEST_F(MyEnv, TestORAZeroPage)
 //		{
 //			uint8_t rom[] = { ORA_ZEROPAGE, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1810,7 +1819,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestORAZeroPageX)
+//		TEST_F(MyEnv, TestORAZeroPageX)
 //		{
 //			uint8_t rom[] = { ORA_ZEROPAGE_X, 0x14 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1823,7 +1832,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestORAAbsolute)
+//		TEST_F(MyEnv, TestORAAbsolute)
 //		{
 //			uint8_t rom[] = { ORA_ABSOLUTE, 0x15, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1835,7 +1844,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestORAAbsoluteX)
+//		TEST_F(MyEnv, TestORAAbsoluteX)
 //		{
 //			uint8_t rom[] = { ORA_ABSOLUTE_X, 0x14, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1848,7 +1857,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestORAAbsoluteY)
+//		TEST_F(MyEnv, TestORAAbsoluteY)
 //		{
 //			uint8_t rom[] = { ORA_ABSOLUTE_Y, 0x14, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1861,7 +1870,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestORAIndexedIndirect)
+//		TEST_F(MyEnv, TestORAIndexedIndirect)
 //		{
 //			bus->write(0x0035, 0x35);
 //			bus->write(0x0036, 0x12); // Pointer to 0x1235
@@ -1876,7 +1885,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestORAIndirectIndexed)
+//		TEST_F(MyEnv, TestORAIndirectIndexed)
 //		{
 //			bus->write(0x0035, 0x35);
 //			bus->write(0x0036, 0x12); // Pointer to 0x1235
@@ -1892,7 +1901,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
 //
-//		TEST_METHOD(TestRTIImplied)
+//		TEST_F(MyEnv, TestRTIImplied)
 //		{
 //			uint8_t rom[] = { RTI_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1908,7 +1917,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
 //
-//		TEST_METHOD(TestPHAImplied)
+//		TEST_F(MyEnv, TestPHAImplied)
 //		{
 //			uint8_t rom[] = { PHA_IMPLIED  };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1920,7 +1929,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)(initialSP - 1), cpu->GetSP());
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestPHPImplied)
+//		TEST_F(MyEnv, TestPHPImplied)
 //		{
 //			uint8_t rom[] = { PHP_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1932,7 +1941,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)(initialSP - 1), cpu->GetSP());
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestPLAImplied)
+//		TEST_F(MyEnv, TestPLAImplied)
 //		{
 //			uint8_t rom[] = { PLA_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1945,7 +1954,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestPLPImplied)
+//		TEST_F(MyEnv, TestPLPImplied)
 //		{
 //			uint8_t rom[] = { PLP_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1960,7 +1969,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
 //
-//		TEST_METHOD(TestROLAccumulator)
+//		TEST_F(MyEnv, TestROLAccumulator)
 //		{
 //			uint8_t rom[] = { ROL_ACCUMULATOR };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1973,7 +1982,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestROLZeroPage)
+//		TEST_F(MyEnv, TestROLZeroPage)
 //		{
 //			uint8_t rom[] = { ROL_ZEROPAGE, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -1986,7 +1995,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
-//		TEST_METHOD(TestROLZeroPageX)
+//		TEST_F(MyEnv, TestROLZeroPageX)
 //		{
 //			uint8_t rom[] = { ROL_ZEROPAGE_X, 0x14 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2000,7 +2009,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestROLAbsolute)
+//		TEST_F(MyEnv, TestROLAbsolute)
 //		{
 //			uint8_t rom[] = { ROL_ABSOLUTE, 0x15, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2013,7 +2022,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestROLAbsoluteX)
+//		TEST_F(MyEnv, TestROLAbsoluteX)
 //		{
 //			uint8_t rom[] = { ROL_ABSOLUTE_X, 0x14, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2028,7 +2037,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 7);
 //		}
 //
-//		TEST_METHOD(TestRORAccumulator)
+//		TEST_F(MyEnv, TestRORAccumulator)
 //		{
 //			uint8_t rom[] = { ROR_ACCUMULATOR };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2041,7 +2050,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestRORZeroPage)
+//		TEST_F(MyEnv, TestRORZeroPage)
 //		{
 //			uint8_t rom[] = { ROR_ZEROPAGE, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2054,7 +2063,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
-//		TEST_METHOD(TestRORZeroPageX)
+//		TEST_F(MyEnv, TestRORZeroPageX)
 //		{
 //			uint8_t rom[] = { ROR_ZEROPAGE_X, 0x14 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2068,7 +2077,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestRORAbsolute)
+//		TEST_F(MyEnv, TestRORAbsolute)
 //		{
 //			uint8_t rom[] = { ROR_ABSOLUTE, 0x15, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2081,7 +2090,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestRORAbsoluteX)
+//		TEST_F(MyEnv, TestRORAbsoluteX)
 //		{
 //			uint8_t rom[] = { ROR_ABSOLUTE_X, 0x14, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2096,7 +2105,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 7);
 //		}
 //
-//		TEST_METHOD(TestRTSImplied)
+//		TEST_F(MyEnv, TestRTSImplied)
 //		{
 //			uint8_t rom[] = { RTS_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2110,7 +2119,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
 //
-//		TEST_METHOD(TestSBCImmediate)
+//		TEST_F(MyEnv, TestSBCImmediate)
 //		{
 //			uint8_t rom[] = { SBC_IMMEDIATE, 0x10 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2124,7 +2133,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestSBCZeroPage)
+//		TEST_F(MyEnv, TestSBCZeroPage)
 //		{
 //			uint8_t rom[] = { SBC_ZEROPAGE, 0x30 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2139,7 +2148,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestSBCZeroPageX)
+//		TEST_F(MyEnv, TestSBCZeroPageX)
 //		{
 //			uint8_t rom[] = { SBC_ZEROPAGE_X, 0x2F };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2155,7 +2164,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestSBCAbsolute)
+//		TEST_F(MyEnv, TestSBCAbsolute)
 //		{
 //			uint8_t rom[] = { SBC_ABSOLUTE, 0x40, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2170,7 +2179,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestSBCAbsoluteX)
+//		TEST_F(MyEnv, TestSBCAbsoluteX)
 //		{
 //			uint8_t rom[] = { SBC_ABSOLUTE_X, 0x3F, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2186,7 +2195,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestSBCAbsoluteY)
+//		TEST_F(MyEnv, TestSBCAbsoluteY)
 //		{
 //			uint8_t rom[] = { SBC_ABSOLUTE_Y, 0x3F, 0x12 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2202,7 +2211,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestSBCIndexedIndirect)
+//		TEST_F(MyEnv, TestSBCIndexedIndirect)
 //		{
 //			bus->write(0x0040, 0x50);
 //			bus->write(0x0041, 0x12); // Pointer to 0x1250
@@ -2220,7 +2229,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestSBCIndirectIndexed)
+//		TEST_F(MyEnv, TestSBCIndirectIndexed)
 //		{
 //			bus->write(0x0040, 0x50);
 //			bus->write(0x0041, 0x12); // Pointer to 0x1250
@@ -2239,7 +2248,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
 //
-//		TEST_METHOD(TestSECImplied)
+//		TEST_F(MyEnv, TestSECImplied)
 //		{
 //			uint8_t rom[] = { SEC_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2249,7 +2258,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
 //
-//		TEST_METHOD(TestSEDImplied)
+//		TEST_F(MyEnv, TestSEDImplied)
 //		{
 //			uint8_t rom[] = { SED_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2259,7 +2268,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
 //
-//		TEST_METHOD(TestSEIImplied)
+//		TEST_F(MyEnv, TestSEIImplied)
 //		{
 //			uint8_t rom[] = { SEI_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2269,7 +2278,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
 //
-//		TEST_METHOD(TestSTAAbsolute)
+//		TEST_F(MyEnv, TestSTAAbsolute)
 //		{
 //			uint8_t rom[] = { STA_ABSOLUTE, 0x20, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2278,7 +2287,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)0x37, bus->read(0x1520));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestSTAAbsoluteX)
+//		TEST_F(MyEnv, TestSTAAbsoluteX)
 //		{
 //			uint8_t rom[] = { STA_ABSOLUTE_X, 0x1F, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2288,7 +2297,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)0x37, bus->read(0x1520));
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
-//		TEST_METHOD(TestSTAAbsoluteY)
+//		TEST_F(MyEnv, TestSTAAbsoluteY)
 //		{
 //			uint8_t rom[] = { STA_ABSOLUTE_Y, 0x1F, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2298,7 +2307,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)0x37, bus->read(0x1520));
 //			Assert::IsTrue(cpu->GetCycleCount() == 5);
 //		}
-//		TEST_METHOD(TestSTAIndexedIndirect)
+//		TEST_F(MyEnv, TestSTAIndexedIndirect)
 //		{
 //			bus->write(0x0040, 0x30);
 //			bus->write(0x0041, 0x12); // Pointer to 0x1230
@@ -2310,7 +2319,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)0x37, bus->read(0x1230));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestSTAIndirectIndexed)
+//		TEST_F(MyEnv, TestSTAIndirectIndexed)
 //		{
 //			bus->write(0x0040, 0x30);
 //			bus->write(0x0041, 0x12); // Pointer to 0x1230
@@ -2322,7 +2331,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)0x37, bus->read(0x1232));
 //			Assert::IsTrue(cpu->GetCycleCount() == 6);
 //		}
-//		TEST_METHOD(TestSTAZeroPage)
+//		TEST_F(MyEnv, TestSTAZeroPage)
 //		{
 //			uint8_t rom[] = { STA_ZEROPAGE, 0x10 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2331,7 +2340,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)0x37, bus->read(0x0010));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestSTAZeroPageX)
+//		TEST_F(MyEnv, TestSTAZeroPageX)
 //		{
 //			uint8_t rom[] = { STA_ZEROPAGE_X, 0x0F };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2342,7 +2351,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
 //
-//		TEST_METHOD(TestSTXZeroPage)
+//		TEST_F(MyEnv, TestSTXZeroPage)
 //		{
 //			uint8_t rom[] = { STX_ZEROPAGE, 0x10 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2351,7 +2360,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)0x37, bus->read(0x0010));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestSTXZeroPageY)
+//		TEST_F(MyEnv, TestSTXZeroPageY)
 //		{
 //			uint8_t rom[] = { STX_ZEROPAGE_Y, 0x0F };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2361,7 +2370,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)0x37, bus->read(0x0010));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestSTXAbsolute)
+//		TEST_F(MyEnv, TestSTXAbsolute)
 //		{
 //			uint8_t rom[] = { STX_ABSOLUTE, 0x20, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2371,7 +2380,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
 //
-//		TEST_METHOD(TestSTYZeroPage)
+//		TEST_F(MyEnv, TestSTYZeroPage)
 //		{
 //			uint8_t rom[] = { STY_ZEROPAGE, 0x10 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2380,7 +2389,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)0x37, bus->read(0x0010));
 //			Assert::IsTrue(cpu->GetCycleCount() == 3);
 //		}
-//		TEST_METHOD(TestSTYZeroPageX)
+//		TEST_F(MyEnv, TestSTYZeroPageX)
 //		{
 //			uint8_t rom[] = { STY_ZEROPAGE_X, 0x0F };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2390,7 +2399,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)0x37, bus->read(0x0010));
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
-//		TEST_METHOD(TestSTYAbsolute)
+//		TEST_F(MyEnv, TestSTYAbsolute)
 //		{
 //			uint8_t rom[] = { STY_ABSOLUTE, 0x20, 0x15 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2400,7 +2409,7 @@ namespace BlueNESTest
 //			Assert::IsTrue(cpu->GetCycleCount() == 4);
 //		}
 //
-//		TEST_METHOD(TestTAXImplied)
+//		TEST_F(MyEnv, TestTAXImplied)
 //		{
 //			uint8_t rom[] = { TAX_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2411,7 +2420,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestTAYImplied)
+//		TEST_F(MyEnv, TestTAYImplied)
 //		{
 //			uint8_t rom[] = { TAY_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2422,7 +2431,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestTSXImplied)
+//		TEST_F(MyEnv, TestTSXImplied)
 //		{
 //			uint8_t rom[] = { TSX_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2433,7 +2442,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestTXAImplied)
+//		TEST_F(MyEnv, TestTXAImplied)
 //		{
 //			uint8_t rom[] = { TXA_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2444,7 +2453,7 @@ namespace BlueNESTest
 //			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestTXSImplied)
+//		TEST_F(MyEnv, TestTXSImplied)
 //		{
 //			uint8_t rom[] = { TXS_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2453,7 +2462,7 @@ namespace BlueNESTest
 //			Assert::AreEqual((uint8_t)0x77, cpu->GetSP());
 //			Assert::IsTrue(cpu->GetCycleCount() == 2);
 //		}
-//		TEST_METHOD(TestTYAImplied)
+//		TEST_F(MyEnv, TestTYAImplied)
 //		{
 //			uint8_t rom[] = { TYA_IMPLIED };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
@@ -2467,7 +2476,7 @@ namespace BlueNESTest
 //		}
 //
 //		// Unofficial op codes
-//		TEST_METHOD(TestNOPZP04)
+//		TEST_F(MyEnv, TestNOPZP04)
 //		{
 //			uint8_t rom[] = { 0x04, 0x00 };
 //			cart->mapper->SetPRGRom(rom, sizeof(rom));
