@@ -1538,6 +1538,176 @@ namespace BlueNESTest
 		EXPECT_EQ(cpu->GetCycleCount(), 2);
 	}
 
+	TEST_F(MyEnv, TestJMPAbsolute)
+	{
+		uint8_t rom[] = { JMP_ABSOLUTE, 0x00, 0x90 }; // Jump to 0x9000
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		RunInst();
+		EXPECT_EQ((uint16_t)0x9000, cpu->GetPC());
+		EXPECT_EQ(cpu->GetCycleCount(), 3);
+	}
+
+	TEST_F(MyEnv, TestJMPIndirect)
+	{
+		bus->write(0x10FF, 0x00); // Low byte of jump address
+		bus->write(0x1000, 0x90); // High byte of jump address (note the page boundary wraparound)
+		uint8_t rom[] = { JMP_INDIRECT, 0xFF, 0x10 }; // Pointer at 0x30FF/3000
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		RunInst();
+		EXPECT_EQ((uint16_t)0x9000, cpu->GetPC());
+		EXPECT_EQ(cpu->GetCycleCount(), 5);
+	}
+
+	TEST_F(MyEnv, TestJMPIndirectNoBug)
+	{
+		bus->write(0x10F0, 0x00); // Low byte of jump address
+		bus->write(0x10F1, 0x90); // High byte of jump address
+		uint8_t rom[] = { JMP_INDIRECT, 0xF0, 0x10 }; // Pointer at 0x30FF/3000
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		RunInst();
+		EXPECT_EQ((uint16_t)0x9000, cpu->GetPC());
+		EXPECT_EQ(cpu->GetCycleCount(), 5);
+	}
+
+	TEST_F(MyEnv, TestJSRAbsolute)
+	{
+		uint8_t rom[] = { JSR_ABSOLUTE, 0x05, 0x80, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetPC(0x8000);
+		RunInst();
+		// After clocking JSR, PC should be at 0x8005
+		EXPECT_EQ((uint16_t)0x8005, cpu->GetPC());
+		// The return address (0x8002) should be on the stack
+		uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 1);
+		uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 2);
+		uint16_t returnAddress = (hi << 8) | lo;
+		EXPECT_EQ((uint16_t)0x8002, returnAddress);
+		EXPECT_EQ(cpu->GetCycleCount(), 6);
+	}
+
+	TEST_F(MyEnv, TestLDAAbsolute)
+	{
+		uint8_t rom[] = { LDA_ABSOLUTE, 0x10, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x1510, 0x37);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x37, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestLDAAbsoluteX)
+	{
+		uint8_t rom[] = { LDA_ABSOLUTE_X, 0x0F, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
+		cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
+		bus->write(0x1510, 0x37);
+		cpu->SetX(0x1);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x37, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestLDAAbsoluteXPageCross)
+	{
+		uint8_t rom[] = { LDA_ABSOLUTE_X, 0x0F, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
+		cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
+		bus->write(0x160E, 0x37);
+		cpu->SetX(0xFF);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x37, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 5);
+	}
+
+	TEST_F(MyEnv, TestLDAAbsoluteY)
+	{
+		uint8_t rom[] = { LDA_ABSOLUTE_Y, 0x0F, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x1510, 0x37);
+		cpu->SetY(0x1);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x37, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestLDAImmediate)
+	{
+		uint8_t rom[] = { LDA_IMMEDIATE, 0x42 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		RunInst();
+		EXPECT_EQ((uint8_t)0x42, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestLDAIndexedIndirect)
+	{
+		bus->write(0x0020, 0x40);
+		bus->write(0x0021, 0x12); // Pointer to 0x1240
+		bus->write(0x1240, 0x37);
+		uint8_t rom[] = { LDA_INDEXEDINDIRECT, 0x1C };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetX(0x4);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x37, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 6);
+	}
+
+	TEST_F(MyEnv, TestLDAIndirectIndexed)
+	{
+		bus->write(0x0020, 0x40);
+		bus->write(0x0021, 0x12); // Pointer to 0x1240
+		bus->write(0x1242, 0x37);
+		uint8_t rom[] = { LDA_INDIRECTINDEXED, 0x20 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetY(0x2);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x37, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 5);
+	}
+
+	TEST_F(MyEnv, TestLDAZeroPage)
+	{
+		uint8_t rom[] = { LDA_ZEROPAGE, 0x10 };
+		cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
+		cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0010, 0x37);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x37, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 3);
+	}
+
+	TEST_F(MyEnv, TestLDAZeroPageX)
+	{
+		uint8_t rom[] = { LDA_ZEROPAGE_X, 0x10 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0015, 0x37);
+		cpu->SetX(0x5);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x37, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
     int main(int argc, char** argv)
     {
         ::testing::InitGoogleTest(&argc, argv);
@@ -1556,166 +1726,7 @@ namespace BlueNESTest
 //
 
 //
-//		TEST_F(MyEnv, TestJMPAbsolute)
-//		{
-//			uint8_t rom[] = { JMP_ABSOLUTE, 0x00, 0x90 }; // Jump to 0x9000
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			RunInst();
-//			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//		TEST_F(MyEnv, TestJMPIndirect)
-//		{
-//			bus->write(0x10FF, 0x00); // Low byte of jump address
-//			bus->write(0x1000, 0x90); // High byte of jump address (note the page boundary wraparound)
-//			uint8_t rom[] = { JMP_INDIRECT, 0xFF, 0x10 }; // Pointer at 0x30FF/3000
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			RunInst();
-//			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 5);
-//		}
-//		TEST_F(MyEnv, TestJMPIndirectNoBug)
-//		{
-//			bus->write(0x10F0, 0x00); // Low byte of jump address
-//			bus->write(0x10F1, 0x90); // High byte of jump address
-//			uint8_t rom[] = { JMP_INDIRECT, 0xF0, 0x10 }; // Pointer at 0x30FF/3000
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			RunInst();
-//			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 5);
-//		}
-//
-//		TEST_F(MyEnv, TestJSRAbsolute)
-//		{
-//			uint8_t rom[] = { JSR_ABSOLUTE, 0x05, 0x80, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetPC(0x8000);
-//			RunInst();
-//			// After clocking JSR, PC should be at 0x8005
-//			Assert::AreEqual((uint16_t)0x8005, cpu->GetPC());
-//			// The return address (0x8002) should be on the stack
-//			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 1);
-//			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 2);
-//			uint16_t returnAddress = (hi << 8) | lo;
-//			Assert::AreEqual((uint16_t)0x8002, returnAddress);
-//			Assert::IsTrue(cpu->GetCycleCount() == 6);
-//		}
-//
-//		TEST_F(MyEnv, TestLDAAbsolute)
-//		{
-//			uint8_t rom[] = { LDA_ABSOLUTE, 0x10, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x1510, 0x37);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//		TEST_F(MyEnv, TestLDAAbsoluteX)
-//		{
-//			uint8_t rom[] = { LDA_ABSOLUTE_X, 0x0F, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
-//			cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
-//			bus->write(0x1510, 0x37);
-//			cpu->SetX(0x1);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//
-//		TEST_F(MyEnv, TestLDAAbsoluteXPageCross)
-//		{
-//			uint8_t rom[] = { LDA_ABSOLUTE_X, 0x0F, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
-//			cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
-//			bus->write(0x160E, 0x37);
-//			cpu->SetX(0xFF);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 5);
-//		}
-//		TEST_F(MyEnv, TestLDAAbsoluteY)
-//		{
-//			uint8_t rom[] = { LDA_ABSOLUTE_Y, 0x0F, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x1510, 0x37);
-//			cpu->SetY(0x1);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//		TEST_F(MyEnv, TestLDAImmediate)
-//		{
-//			uint8_t rom[] = { LDA_IMMEDIATE, 0x42 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x42, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//		TEST_F(MyEnv, TestLDAIndexedIndirect)
-//		{
-//			bus->write(0x0020, 0x40);
-//			bus->write(0x0021, 0x12); // Pointer to 0x1240
-//			bus->write(0x1240, 0x37);
-//			uint8_t rom[] = { LDA_INDEXEDINDIRECT, 0x1C };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetX(0x4);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 6);
-//		}
-//		TEST_F(MyEnv, TestLDAIndirectIndexed)
-//		{
-//			bus->write(0x0020, 0x40);
-//			bus->write(0x0021, 0x12); // Pointer to 0x1240
-//			bus->write(0x1242, 0x37);
-//			uint8_t rom[] = { LDA_INDIRECTINDEXED, 0x20 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetY(0x2);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 5);
-//		}
-//		TEST_F(MyEnv, TestLDAZeroPage)
-//		{
-//			uint8_t rom[] = { LDA_ZEROPAGE, 0x10 };
-//			cpu->SetFlag(FLAG_ZERO); // Set zero flag to see if it gets cleared
-//			cpu->SetFlag(FLAG_NEGATIVE); // Set negative flag to see if it gets cleared
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0010, 0x37);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//		TEST_F(MyEnv, TestLDAZeroPageX)
-//		{
-//			uint8_t rom[] = { LDA_ZEROPAGE_X, 0x10 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0015, 0x37);
-//			cpu->SetX(0x5);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x37, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
+
 //
 //		TEST_F(MyEnv, TestLDXImmediate)
 //		{
