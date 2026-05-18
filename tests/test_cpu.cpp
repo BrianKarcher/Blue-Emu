@@ -498,6 +498,209 @@ namespace BlueNESTest
 		EXPECT_EQ(cpu->GetCycleCount(), 5);
 	}
 
+	TEST_F(MyEnv, TestASLAccumulator)
+	{
+		uint8_t rom[] = { ASL_ACCUMULATOR };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetA(0x45); // 0100 0101
+		RunInst();
+		// Shift left: 1000 1010
+		EXPECT_EQ((uint8_t)0x8A, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestASLZeroPage)
+	{
+		uint8_t rom[] = { ASL_ZEROPAGE, 0x10 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0010, 0x45); // 0100 0101
+		RunInst();
+		// Shift left: 1000 1010
+		EXPECT_EQ((uint8_t)0x8A, bus->read(0x0010));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_EQ(cpu->GetCycleCount(), 5);
+	}
+
+	TEST_F(MyEnv, TestASLZeroPageX)
+	{
+		uint8_t rom[] = { ASL_ZEROPAGE_X, 0x0F };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0010, 0x45); // 0100 0101
+		cpu->SetX(0x1);
+		RunInst();
+		// Shift left: 1000 1010
+		EXPECT_EQ((uint8_t)0x8A, bus->read(0x0010));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_EQ(cpu->GetCycleCount(), 6);
+	}
+
+	TEST_F(MyEnv, TestASLAbsolute)
+	{
+		uint8_t rom[] = { ASL_ABSOLUTE, 0x25, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x1525, 0x45); // 0100 0101
+		RunInst();
+		// Shift left: 1000 1010
+		EXPECT_EQ((uint8_t)0x8A, bus->read(0x1525));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_EQ(cpu->GetCycleCount(), 6);
+	}
+
+	TEST_F(MyEnv, TestASLAbsoluteX)
+	{
+		uint8_t rom[] = { ASL_ABSOLUTE_X, 0x24, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x1525, 0x45); // 0100 0101
+		cpu->SetX(0x1);
+		RunInst();
+		// Shift left: 1000 1010
+		EXPECT_EQ((uint8_t)0x8A, bus->read(0x1525));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_EQ(cpu->GetCycleCount(), 7);
+	}
+
+	TEST_F(MyEnv, TestBCCRelative)
+	{
+		uint8_t rom[] = { BCC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->ClearFlag(FLAG_CARRY); // Clear carry to take branch
+		RunInst();
+		// After clocking BCC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+		EXPECT_EQ((uint16_t)0x8007, cpu->GetPC());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_EQ(cpu->GetCycleCount(), 3);
+	}
+
+	TEST_F(MyEnv, TestBCCRelativePageCross)
+	{
+		uint8_t rom[] = { BCC_RELATIVE, 0xDF, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->ClearFlag(FLAG_CARRY); // Clear carry to take branch
+		RunInst();
+		// After clocking BCC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+		EXPECT_EQ((uint16_t)0x7FE1, cpu->GetPC());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestBCCRelativeNotTaken)
+	{
+		uint8_t rom[] = { BCC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetFlag(FLAG_CARRY); // Set carry to not take branch
+		RunInst();
+		// After clocking BCC, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+		EXPECT_EQ((uint16_t)0x8002, cpu->GetPC());
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestBCSRelative)
+	{
+		uint8_t rom[] = { BCS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetFlag(FLAG_CARRY); // Set carry to take branch
+		RunInst();
+		// After clocking BCS, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+		EXPECT_EQ((uint16_t)0x8007, cpu->GetPC());
+		EXPECT_TRUE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_EQ(cpu->GetCycleCount(), 3);
+	}
+
+	TEST_F(MyEnv, TestBCSRelativeNotTaken)
+	{
+		uint8_t rom[] = { BCS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->ClearFlag(FLAG_CARRY); // Clear carry to not take branch
+		RunInst();
+		// After clocking BCS, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+		EXPECT_EQ((uint16_t)0x8002, cpu->GetPC());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestBEQRelative)
+	{
+		uint8_t rom[] = { BEQ_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetFlag(FLAG_ZERO); // Set zero to take branch
+		RunInst();
+		// After clocking BEQ, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
+		EXPECT_EQ((uint16_t)0x8007, cpu->GetPC());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_EQ(cpu->GetCycleCount(), 3);
+	}
+
+	TEST_F(MyEnv, TestBEQRelativeNotTaken)
+	{
+		uint8_t rom[] = { BEQ_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->ClearFlag(FLAG_ZERO); // Clear zero to not take branch
+		RunInst();
+		// After clocking BEQ, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
+		EXPECT_EQ((uint16_t)0x8002, cpu->GetPC());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_DECIMAL));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_UNUSED));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
     int main(int argc, char** argv)
     {
         ::testing::InitGoogleTest(&argc, argv);
@@ -525,136 +728,9 @@ namespace BlueNESTest
 //
 
 //
-//		TEST_METHOD(TestASLAccumulator)
-//		{
-//			uint8_t rom[] = { ASL_ACCUMULATOR };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetA(0x45); // 0100 0101
-//			RunInst();
-//			// Shift left: 1000 1010
-//			Assert::AreEqual((uint8_t)0x8A, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//		TEST_METHOD(TestASLZeroPage)
-//		{
-//			uint8_t rom[] = { ASL_ZEROPAGE, 0x10 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0010, 0x45); // 0100 0101
-//			RunInst();
-//			// Shift left: 1000 1010
-//			Assert::AreEqual((uint8_t)0x8A, bus->read(0x0010));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetCycleCount() == 5);
-//		}
-//		TEST_METHOD(TestASLZeroPageX)
-//		{
-//			uint8_t rom[] = { ASL_ZEROPAGE_X, 0x0F };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0010, 0x45); // 0100 0101
-//			cpu->SetX(0x1);
-//			RunInst();
-//			// Shift left: 1000 1010
-//			Assert::AreEqual((uint8_t)0x8A, bus->read(0x0010));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetCycleCount() == 6);
-//		}
-//		TEST_METHOD(TestASLAbsolute)
-//		{
-//			uint8_t rom[] = { ASL_ABSOLUTE, 0x25, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x1525, 0x45); // 0100 0101
-//			RunInst();
-//			// Shift left: 1000 1010
-//			Assert::AreEqual((uint8_t)0x8A, bus->read(0x1525));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetCycleCount() == 6);
-//		}
-//		TEST_METHOD(TestASLAbsoluteX)
-//		{
-//			uint8_t rom[] = { ASL_ABSOLUTE_X, 0x24, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x1525, 0x45); // 0100 0101
-//			cpu->SetX(0x1);
-//			RunInst();
-//			// Shift left: 1000 1010
-//			Assert::AreEqual((uint8_t)0x8A, bus->read(0x1525));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetCycleCount() == 7);
-//		}
+
 //
-//		TEST_METHOD(TestBCCRelative)
-//		{
-//			uint8_t rom[] = { BCC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->ClearFlag(FLAG_CARRY); // Clear carry to take branch
-//			RunInst();
-//			// After clocking BCC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
-//			Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//		TEST_METHOD(TestBCCRelativePageCross)
-//		{
-//			uint8_t rom[] = { BCC_RELATIVE, 0xDF, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->ClearFlag(FLAG_CARRY); // Clear carry to take branch
-//			RunInst();
-//			// After clocking BCC, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
-//			Assert::AreEqual((uint16_t)0x7FE1, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//		TEST_METHOD(TestBCCRelativeNotTaken)
-//		{
-//			uint8_t rom[] = { BCC_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetFlag(FLAG_CARRY); // Set carry to not take branch
-//			RunInst();
-//			// After clocking BCC, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
-//			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//
-//		TEST_METHOD(TestBCSRelative)
-//		{
-//			uint8_t rom[] = { BCS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetFlag(FLAG_CARRY); // Set carry to take branch
-//			RunInst();
-//			// After clocking BCS, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
-//			Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//		TEST_METHOD(TestBCSRelativeNotTaken)
-//		{
-//			uint8_t rom[] = { BCS_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->ClearFlag(FLAG_CARRY); // Clear carry to not take branch
-//			RunInst();
-//			// After clocking BCS, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
-//			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//
-//		TEST_METHOD(TestBEQRelative)
-//		{
-//			uint8_t rom[] = { BEQ_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetFlag(FLAG_ZERO); // Set zero to take branch
-//			RunInst();
-//			// After clocking BEQ, PC should be at 0x8007 (start at 0x8000 + 2 for instruction + 5 for branch)
-//			Assert::AreEqual((uint16_t)0x8007, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//		TEST_METHOD(TestBEQRelativeNotTaken)
-//		{
-//			uint8_t rom[] = { BEQ_RELATIVE, 0x05, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED, NOP_IMPLIED };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->ClearFlag(FLAG_ZERO); // Clear zero to not take branch
-//			RunInst();
-//			// After clocking BEQ, PC should be at 0x8002 (start at 0x8000 + 2 for instruction)
-//			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
+
 //
 //		TEST_METHOD(TestBITZeroPage)
 //		{
