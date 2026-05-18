@@ -9,34 +9,497 @@
 
 namespace BlueNESTest
 {
-    SharedContext ctx;
-    Nes* nes;
-    NesBus* bus;
-    NesCpu* cpu;
-    NesCartridge* cart;
+    class MyEnv : public ::testing::Test {
+    public:
+        void SetUp() override {
+            nes = new Nes(ctx);
+            cart = nes->cart_;
+            cart->mapper = new NROM(cart);
+            bus = nes->bus_;
+            cart->mapper->register_memory(*bus);
+            cart->mapper->m_prgRamData.resize(0x2000);
+            cpu = nes->cpu_;
+            cpu->init_cpu();
+            uint8_t rom[0x8000];
+            cart->mapper->SetPRGRom(rom, sizeof(rom));
+            uint8_t chr[0x2000];
+            cart->mapper->SetCHRRom(chr, sizeof(chr));
+            cart->mapper->RecomputeMappings();
+            cpu->PowerCycle();
+            cpu->SetPC(0x8000);
+        }
+        void TearDown() override {
+        }
+        void RunInst() {
+            bool first = true;
+            while (first || !cpu->inst_complete) {
+                first = false;
+                cpu->cpu_tick();
+            }
+        }
+        SharedContext ctx;
+        Nes* nes;
+        NesBus* bus;
+        NesCpu* cpu;
+        NesCartridge* cart;
+    };
 
     TEST(SampleTest, PlaceholderTest)
     {
         EXPECT_EQ(1, 1);
     }
 
+    TEST_F(MyEnv, TestHardwareNMIImmediate)
+	{
+		uint8_t rom[0x8000];
+		rom[0] = ADC_IMMEDIATE;
+		rom[1] = 0x20;
+		rom[0xFFFA - 0x8000] = 0x00;
+		rom[0xFFFB - 0x8000] = 0x90;
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetNMIImmediate();
+		uint8_t p = cpu->GetStatus();
+		RunInst();
+		// Now ensure NMI has triggered and PC is at NMI vector
+		EXPECT_EQ((uint16_t)0x9000, cpu->GetPC());
+		// The return address (0x8000) should be on the stack
+		// It is 8000 because ADC_IMMEDIATE was interrupted.
+		uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
+		uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
+		uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
+		EXPECT_EQ((uint8_t)((p & 0xEF) | 0x20), new_p);
+		EXPECT_EQ(0x8000, (hi << 8) | lo);
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		// Just the NMI was run = 7 cycles
+		EXPECT_EQ(cpu->GetCycleCount(), 7);
+	}
+
+	TEST_F(MyEnv, TestHardwareNMIPriorityOverIRQ)
+	{
+		uint8_t rom[0x8000];
+		rom[0] = ADC_IMMEDIATE;
+		rom[1] = 0x20;
+		rom[0xFFFA - 0x8000] = 0x00; // NMI vector
+		rom[0xFFFB - 0x8000] = 0x90;
+		rom[0xFFFE - 0x8000] = 0x00; // IRQ vector
+		rom[0xFFFF - 0x8000] = 0x91;
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetNMIImmediate();
+		cpu->SetIRQImmediate(); // IRQ should be ignored because NMI has higher priority
+		uint8_t p = cpu->GetStatus();
+		RunInst();
+		// Now ensure NMI has triggered and PC is at NMI vector
+		EXPECT_EQ((uint16_t)0x9000, cpu->GetPC());
+		// The return address (0x8000) should be on the stack
+		// It is 8000 because ADC_IMMEDIATE was interrupted.
+		uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
+		uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
+		uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
+		EXPECT_EQ((uint8_t)((p & 0xEF) | 0x20), new_p);
+		EXPECT_EQ(0x8000, (hi << 8) | lo);
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		// Just the NMI was run = 7 cycles
+		EXPECT_EQ(cpu->GetCycleCount(), 7);
+	}
+
+	TEST_F(MyEnv, TestHardwareIRQInsideNMIBlocked)
+	{
+		uint8_t rom[0x8000];
+		rom[0x1000] = NOP_IMPLIED;
+		rom[0x1001] = NOP_IMPLIED;
+		//rom[0x9000 - 0x8000] = NOP_IMPLIED; // IRQ handler does nothing
+		rom[0xFFFA - 0x8000] = 0x00; // NMI vector
+		rom[0xFFFB - 0x8000] = 0x90;
+		rom[0x9100 - 0x8000] = NOP_IMPLIED; // NMI handler does nothing
+		rom[0xFFFE - 0x8000] = 0x00; // IRQ vector
+		rom[0xFFFF - 0x8000] = 0x91;
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetNMIImmediate();
+		RunInst();
+		// Ensure we are inside NMI with interrupts disabled
+		EXPECT_EQ((uint16_t)0x9000, cpu->GetPC());
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		// Attempt to trigger IRQ inside NMI with interrupts disabled
+		cpu->setIRQ(true);
+		// Run two instructions because of the delayed IRQ effect
+		RunInst();
+		RunInst();
+		// Instead of jumping to the IRQ vector, we should have just run the NOP's at 0x9000 and 0x9001.
+		EXPECT_EQ((uint16_t)0x9002, cpu->GetPC());
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		uint8_t p = cpu->GetStatus();
+		// Now ensure NMI has triggered and PC is at NMI vector
+			
+		// The return address (0x8000) should be on the stack
+		// It is 8000 because ADC_IMMEDIATE was interrupted.
+		uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
+		uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
+		uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
+		EXPECT_EQ((uint8_t)((p & 0xEF) | 0x20), new_p);
+		EXPECT_EQ(0x8000, (hi << 8) | lo);
+		
+		// NMI + NOP + NOP = 7 + 2 + 2 = 11 cycles
+		EXPECT_EQ(cpu->GetCycleCount(), 11);
+	}
+
+	TEST_F(MyEnv, TestBRKInsideNMINotBlocked)
+	{
+		uint8_t rom[0x8000];
+		rom[0x1000] = BRK_IMPLIED;
+		//rom[0x9000 - 0x8000] = NOP_IMPLIED; // IRQ handler does nothing
+		rom[0xFFFA - 0x8000] = 0x00; // NMI vector
+		rom[0xFFFB - 0x8000] = 0x90;
+		rom[0x9100 - 0x8000] = NOP_IMPLIED; // NMI handler does nothing
+		rom[0xFFFE - 0x8000] = 0x00; // IRQ vector
+		rom[0xFFFF - 0x8000] = 0x91;
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetNMIImmediate();
+		RunInst();
+		// Ensure we are inside NMI with interrupts disabled
+		EXPECT_EQ((uint16_t)0x9000, cpu->GetPC());
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		// Run the BRK inside NMI with interrupts disabled
+		RunInst();
+		// We are now at the IRQ vector since BRK always triggers IRQ/BRK vector
+		EXPECT_EQ((uint16_t)0x9100, cpu->GetPC());
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		uint8_t p = cpu->GetStatus();
+		// Now ensure NMI has triggered and PC is at NMI vector
+
+		// The return address (0x8000) should be on the stack
+		// It is 8000 because ADC_IMMEDIATE was interrupted.
+		uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
+		uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
+		uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
+		EXPECT_EQ((uint8_t)((p & 0xEF) | 0x20 | FLAG_BREAK), new_p);
+		// The return address should be 0x9002 since BRK was executed at 0x9000
+		EXPECT_EQ(0x9002, (hi << 8) | lo);
+
+		// NMI + BRK = 7 + 7 = 14 cycles
+		EXPECT_EQ(cpu->GetCycleCount(), 14);
+	}
+
+	// "it's really the status of the interrupt lines at the end of the second-to-last cycle that matters."
+	// To test this, we first set the NMI line low.
+	// Then we run an instruction that takes 2 cycles(ADC IMM), but it could be any instruction.
+	// During that execution, the CPU will have had enough time to sample the NMI line.
+	// We run another instruction (another ADC IMM) which should be interrupted by NMI.
+	// It does not matter what the second instruction is, as long as it takes at least one cycle.
+	TEST_F(MyEnv, TestHardwareNMI)
+	{
+		uint8_t rom[0x8000];
+		rom[0] = ADC_IMMEDIATE;
+		rom[1] = 0x20;
+		rom[2] = ADC_IMMEDIATE;
+		rom[3] = 0x30;
+		rom[0xFFFA - 0x8000] = 0x00;
+		rom[0xFFFB - 0x8000] = 0x90;
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->setNMI(true);
+		uint8_t p = cpu->GetStatus();
+		RunInst();
+		// Ensure NMI has NOT triggered. The PC should be at 0x8002 after first ADC.
+		EXPECT_EQ((uint16_t)0x8002, cpu->GetPC());
+		RunInst();
+		EXPECT_EQ((uint16_t)0x9000, cpu->GetPC());
+		// The return address (0x8002) should be on the stack
+		uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
+		EXPECT_EQ((uint8_t)((p & 0xEF) | 0x20), new_p);
+		uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
+		uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
+		EXPECT_EQ(0x8002, (hi << 8) | lo);
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		// First ADC IMM = 2, NMI = 7
+		EXPECT_EQ(cpu->GetCycleCount(), 9);
+	}
+
+	TEST_F(MyEnv, TestHardwareIRQImmediate)
+	{
+		uint8_t rom[0x8000];
+		rom[0] = ADC_IMMEDIATE;
+		rom[1] = 0x20;
+		rom[0xFFFE - 0x8000] = 0x00;
+		rom[0xFFFF - 0x8000] = 0x90;
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetIRQImmediate();
+		cpu->ClearFlag(FLAG_INTERRUPT); // Clear interrupt flag to allow BRK to proceed
+		uint8_t p = cpu->GetStatus();
+		RunInst();
+		// Now ensure BRK has triggered and PC is at IRQ vector
+		EXPECT_EQ((uint16_t)0x9000, cpu->GetPC());
+		// The return address (0x8000) should be on the stack
+		// It is 8000 because ADC_IMMEDIATE was interrupted.
+		uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
+		uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
+		uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
+		EXPECT_EQ((uint8_t)((p & 0xEF) | 0x20), new_p);
+		EXPECT_EQ(0x8000, (hi << 8) | lo);
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		// Just the IRQ was run = 7 cycles
+		EXPECT_EQ(cpu->GetCycleCount(), 7);
+	}
+		
+	TEST_F(MyEnv, TestHardwareIRQ)
+	{
+		uint8_t rom[0x8000];
+		rom[0] = ADC_IMMEDIATE;
+		rom[1] = 0x20;
+		rom[2] = ADC_IMMEDIATE;
+		rom[3] = 0x30;
+		rom[0xFFFE - 0x8000] = 0x00;
+		rom[0xFFFF - 0x8000] = 0x90;
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->setIRQ(true);
+		cpu->ClearFlag(FLAG_INTERRUPT); // Clear interrupt flag to allow BRK to proceed
+		uint8_t p = cpu->GetStatus();
+		RunInst();
+		// Ensure BRK has NOT triggered. The PC should be at 0x8002 after first ADC.
+		EXPECT_EQ((uint16_t)0x8002, cpu->GetPC());
+		RunInst();
+		// Now ensure BRK has triggered and PC is at IRQ vector
+		EXPECT_EQ((uint16_t)0x9000, cpu->GetPC());
+		// The return address (0x8002) should be on the stack
+		uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
+		uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
+		uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
+		EXPECT_EQ((uint8_t)((p & 0xEF) | 0x20), new_p);
+		EXPECT_EQ(0x8002, (hi << 8) | lo);
+		EXPECT_TRUE(cpu->GetFlag(FLAG_INTERRUPT));
+		// First ADC IMM = 2, BRK = 7
+		EXPECT_EQ(cpu->GetCycleCount(), 9);
+	}
+
+    TEST_F(MyEnv, TestADCImmediate1)
+    {
+        uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
+        cart->mapper->SetPRGRom(rom, sizeof(rom));
+
+        RunInst();
+		EXPECT_EQ((uint8_t)0x20, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+    }
+
+	TEST_F(MyEnv, TestADCImmediateWithCarry)
+	{
+		uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetA(0x11);
+		cpu->SetFlag(FLAG_CARRY);
+		RunInst();
+		// 0x11 + 0x20 + 1 (Carry) = 0x32
+		EXPECT_EQ((uint8_t)0x32, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestADCImmediateWithOverflow)
+	{
+		// $70 + $20 will result in signed overflow
+		cpu->SetA(0x70);
+		uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		RunInst();
+		EXPECT_EQ((uint8_t)0x90, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestADCZeroPage)
+	{
+		// Add what is at zero page 0x15 to A.
+		uint8_t rom[] = { ADC_ZEROPAGE, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0015, 0x69);
+		cpu->SetA(0x18);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x81, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_EQ(cpu->GetCycleCount(), 3);
+	}
+
+	TEST_F(MyEnv, TestADCZeroPage_X)
+	{
+		// Add what is at zero page 0x15 to A.
+		uint8_t rom[] = { ADC_ZEROPAGE_X, 0x15 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x0016, 0x69);
+		cpu->SetA(0x18);
+		cpu->SetX(0x1);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x81, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestADCAbsolute)
+	{
+		// I think the 6502 stores in little endian, need to double check
+		uint8_t rom[] = { ADC_ABSOLUTE, 0x23, 0x3 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x323, 0x40);
+		cpu->SetA(0x20);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x60, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestADCNonNegative)
+	{
+		// I think the 6502 stores in little endian, need to double check
+		uint8_t rom[] = { ADC_ABSOLUTE, 0x23, 0x3 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		bus->write(0x323, 0x40);
+		cpu->SetA(0x20);
+		cpu->SetFlag(FLAG_ZERO);
+		RunInst();
+		EXPECT_EQ((uint8_t)0x60, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+	TEST_F(MyEnv, TestADCImmediateNegativeResult)
+	{
+		uint8_t rom[] = { ADC_IMMEDIATE, 0x90 }; // 144 decimal
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetA(0x50); // 80 decimal
+		RunInst();
+		// 80 + 144 = 224 which is negative in signed 8-bit
+		EXPECT_EQ((uint8_t)0xE0, cpu->GetA());
+		EXPECT_FALSE(cpu->GetFlag(FLAG_ZERO));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_OVERFLOW));
+		EXPECT_FALSE(cpu->GetFlag(FLAG_CARRY));
+		EXPECT_TRUE(cpu->GetFlag(FLAG_NEGATIVE));
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestANDImmediate)
+	{
+		uint8_t rom[] = { AND_IMMEDIATE, 0x7 }; // 0111
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetA(0xE); // 1110
+		RunInst();
+		// 0x11 + 0x20 + 1 (Carry) = 0x32
+		EXPECT_EQ((uint8_t)0x6, cpu->GetA()); // 0110
+		EXPECT_EQ(cpu->GetCycleCount(), 2);
+	}
+
+	TEST_F(MyEnv, TestANDZeroPage)
+	{
+		bus->write(0x0035, 0x07); // 0111
+		uint8_t rom[] = { AND_ZEROPAGE, 0x35 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetA(0xE); // 1110
+
+		RunInst();
+		// 0x11 + 0x20 + 1 (Carry) = 0x32
+		EXPECT_EQ((uint8_t)0x6, cpu->GetA()); // 0110
+		EXPECT_EQ(cpu->GetCycleCount(), 3);
+	}
+
+	TEST_F(MyEnv, TestANDZeroPageX)
+	{
+		bus->write(0x0035, 0x07); // 0111
+		uint8_t rom[] = { AND_ZEROPAGE_X, 0x34 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetX(0x1);
+		cpu->SetA(0xE); // 1110
+
+		RunInst();
+		// 0x11 + 0x20 + 1 (Carry) = 0x32
+		EXPECT_EQ((uint8_t)0x6, cpu->GetA()); // 0110
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestANDAbsolute)
+	{
+		bus->write(0x0235, 0x07); // 0111
+		uint8_t rom[] = { AND_ABSOLUTE, 0x35, 0x02 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetA(0xE); // 1110
+
+		RunInst();
+		// 0x11 + 0x20 + 1 (Carry) = 0x32
+		EXPECT_EQ((uint8_t)0x6, cpu->GetA()); // 0110
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestANDAbsoluteX)
+	{
+		bus->write(0x0235, 0x07); // 0111
+		uint8_t rom[] = { AND_ABSOLUTE_X, 0x33, 0x02 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetA(0xE); // 1110
+		cpu->SetX(0x2);
+
+		RunInst();
+		// 0x11 + 0x20 + 1 (Carry) = 0x32
+		EXPECT_EQ((uint8_t)0x6, cpu->GetA()); // 0110
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestANDAbsoluteY)
+	{
+		bus->write(0x0235, 0x07); // 0111
+		uint8_t rom[] = { AND_ABSOLUTE_Y, 0x33, 0x02 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetA(0xE); // 1110
+		cpu->SetY(0x2);
+
+		RunInst();
+		// 0x11 + 0x20 + 1 (Carry) = 0x32
+		EXPECT_EQ((uint8_t)0x6, cpu->GetA()); // 0110
+		EXPECT_EQ(cpu->GetCycleCount(), 4);
+	}
+
+	TEST_F(MyEnv, TestANDIndexedIndirect)
+	{
+		bus->write(0x0035, 0x35);
+		bus->write(0x0036, 0x02); // Pointer to 0x0235
+		bus->write(0x0235, 0x07); // 0111
+		uint8_t rom[] = { AND_INDEXEDINDIRECT, 0x33 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetA(0xE); // 1110
+		cpu->SetX(0x2);
+
+		RunInst();
+		// 0x11 + 0x20 + 1 (Carry) = 0x32
+		EXPECT_EQ((uint8_t)0x6, cpu->GetA()); // 0110
+		EXPECT_EQ(cpu->GetCycleCount(), 6);
+	}
+
+	TEST_F(MyEnv, TestANDIndirectIndexed)
+	{
+		bus->write(0x0035, 0x35);
+		bus->write(0x0036, 0x02); // Pointer to 0x0235
+		bus->write(0x0237, 0x07); // 0111
+		uint8_t rom[] = { AND_INDIRECTINDEXED, 0x35 };
+		cart->mapper->SetPRGRom(rom, sizeof(rom));
+		cpu->SetA(0xE); // 1110
+		cpu->SetY(0x2);
+		RunInst();
+		// 0x11 + 0x20 + 1 (Carry) = 0x32
+		EXPECT_EQ((uint8_t)0x6, cpu->GetA()); // 0110
+		EXPECT_EQ(cpu->GetCycleCount(), 5);
+	}
+
     int main(int argc, char** argv)
     {
-        nes = new Nes(ctx);
-		cart = nes->cart_;
-		cart->mapper = new NROM(cart);
-		bus = nes->bus_;
-		cart->mapper->register_memory(*bus);
-		cart->mapper->m_prgRamData.resize(0x2000);
-		cpu = nes->cpu_;
-		cpu->init_cpu();
-		uint8_t rom[0x8000];
-		cart->mapper->SetPRGRom(rom, sizeof(rom));
-		uint8_t chr[0x2000];
-		cart->mapper->SetCHRRom(chr, sizeof(chr));
-		cart->mapper->RecomputeMappings();
-		cpu->PowerCycle();
-		cpu->SetPC(0x8000);
         ::testing::InitGoogleTest(&argc, argv);
         return RUN_ALL_TESTS();
     }
@@ -48,466 +511,19 @@ namespace BlueNESTest
 
 //
 //#include "INESLoader.h"
+//
+
+//
 
 //
 
 //
-//using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 //
 
-//	TEST_CLASS(BlueNESTest)
-//	{
-//	private:
-//		
-//		
-//		
-//		
-//		
-//		void RunInst() {
-//			bool first = true;
-//			while (first || !cpu->inst_complete) {
-//				first = false;
-//				cpu->cpu_tick();
-//			}
-//		}
 //
-//	public:
-//		TEST_METHOD_INITIALIZE(TestSetup)
-//		{
 
-//		}
 //
-//		TEST_METHOD(TestHardwareNMIImmediate)
-//		{
-//			uint8_t rom[0x8000];
-//			rom[0] = ADC_IMMEDIATE;
-//			rom[1] = 0x20;
-//			rom[0xFFFA - 0x8000] = 0x00;
-//			rom[0xFFFB - 0x8000] = 0x90;
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetNMIImmediate();
-//			uint8_t p = cpu->GetStatus();
-//			RunInst();
-//			// Now ensure NMI has triggered and PC is at NMI vector
-//			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
-//			// The return address (0x8000) should be on the stack
-//			// It is 8000 because ADC_IMMEDIATE was interrupted.
-//			uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
-//			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
-//			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
-//			Assert::AreEqual((uint8_t)((p & 0xEF) | 0x20), new_p);
-//			Assert::AreEqual(0x8000, (hi << 8) | lo);
-//			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-//			// Just the NMI was run = 7 cycles
-//			Assert::IsTrue(cpu->GetCycleCount() == 7);
-//		}
-//
-//		TEST_METHOD(TestHardwareNMIPriorityOverIRQ)
-//		{
-//			uint8_t rom[0x8000];
-//			rom[0] = ADC_IMMEDIATE;
-//			rom[1] = 0x20;
-//			rom[0xFFFA - 0x8000] = 0x00; // NMI vector
-//			rom[0xFFFB - 0x8000] = 0x90;
-//			rom[0xFFFE - 0x8000] = 0x00; // IRQ vector
-//			rom[0xFFFF - 0x8000] = 0x91;
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetNMIImmediate();
-//			cpu->SetIRQImmediate(); // IRQ should be ignored because NMI has higher priority
-//			uint8_t p = cpu->GetStatus();
-//			RunInst();
-//			// Now ensure NMI has triggered and PC is at NMI vector
-//			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
-//			// The return address (0x8000) should be on the stack
-//			// It is 8000 because ADC_IMMEDIATE was interrupted.
-//			uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
-//			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
-//			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
-//			Assert::AreEqual((uint8_t)((p & 0xEF) | 0x20), new_p);
-//			Assert::AreEqual(0x8000, (hi << 8) | lo);
-//			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-//			// Just the NMI was run = 7 cycles
-//			Assert::IsTrue(cpu->GetCycleCount() == 7);
-//		}
-//
-//		TEST_METHOD(TestHardwareIRQInsideNMIBlocked)
-//		{
-//			uint8_t rom[0x8000];
-//			rom[0x1000] = NOP_IMPLIED;
-//			rom[0x1001] = NOP_IMPLIED;
-//			//rom[0x9000 - 0x8000] = NOP_IMPLIED; // IRQ handler does nothing
-//			rom[0xFFFA - 0x8000] = 0x00; // NMI vector
-//			rom[0xFFFB - 0x8000] = 0x90;
-//			rom[0x9100 - 0x8000] = NOP_IMPLIED; // NMI handler does nothing
-//			rom[0xFFFE - 0x8000] = 0x00; // IRQ vector
-//			rom[0xFFFF - 0x8000] = 0x91;
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetNMIImmediate();
-//			RunInst();
-//			// Ensure we are inside NMI with interrupts disabled
-//			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-//			// Attempt to trigger IRQ inside NMI with interrupts disabled
-//			cpu->setIRQ(true);
-//			// Run two instructions because of the delayed IRQ effect
-//			RunInst();
-//			RunInst();
-//			// Instead of jumping to the IRQ vector, we should have just run the NOP's at 0x9000 and 0x9001.
-//			Assert::AreEqual((uint16_t)0x9002, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-//			uint8_t p = cpu->GetStatus();
-//			// Now ensure NMI has triggered and PC is at NMI vector
-//			
-//			// The return address (0x8000) should be on the stack
-//			// It is 8000 because ADC_IMMEDIATE was interrupted.
-//			uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
-//			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
-//			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
-//			Assert::AreEqual((uint8_t)((p & 0xEF) | 0x20), new_p);
-//			Assert::AreEqual(0x8000, (hi << 8) | lo);
-//			
-//			// NMI + NOP + NOP = 7 + 2 + 2 = 11 cycles
-//			Assert::IsTrue(cpu->GetCycleCount() == 11);
-//		}
-//
-//		TEST_METHOD(TestBRKInsideNMINotBlocked)
-//		{
-//			uint8_t rom[0x8000];
-//			rom[0x1000] = BRK_IMPLIED;
-//			//rom[0x9000 - 0x8000] = NOP_IMPLIED; // IRQ handler does nothing
-//			rom[0xFFFA - 0x8000] = 0x00; // NMI vector
-//			rom[0xFFFB - 0x8000] = 0x90;
-//			rom[0x9100 - 0x8000] = NOP_IMPLIED; // NMI handler does nothing
-//			rom[0xFFFE - 0x8000] = 0x00; // IRQ vector
-//			rom[0xFFFF - 0x8000] = 0x91;
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetNMIImmediate();
-//			RunInst();
-//			// Ensure we are inside NMI with interrupts disabled
-//			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-//			// Run the BRK inside NMI with interrupts disabled
-//			RunInst();
-//			// We are now at the IRQ vector since BRK always triggers IRQ/BRK vector
-//			Assert::AreEqual((uint16_t)0x9100, cpu->GetPC());
-//			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-//			uint8_t p = cpu->GetStatus();
-//			// Now ensure NMI has triggered and PC is at NMI vector
-//
-//			// The return address (0x8000) should be on the stack
-//			// It is 8000 because ADC_IMMEDIATE was interrupted.
-//			uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
-//			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
-//			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
-//			Assert::AreEqual((uint8_t)((p & 0xEF) | 0x20 | FLAG_BREAK), new_p);
-//			// The return address should be 0x9002 since BRK was executed at 0x9000
-//			Assert::AreEqual(0x9002, (hi << 8) | lo);
-//
-//			// NMI + BRK = 7 + 7 = 14 cycles
-//			Assert::IsTrue(cpu->GetCycleCount() == 14);
-//		}
-//
-//		// "it's really the status of the interrupt lines at the end of the second-to-last cycle that matters."
-//		// To test this, we first set the NMI line low.
-//		// Then we run an instruction that takes 2 cycles(ADC IMM), but it could be any instruction.
-//		// During that execution, the CPU will have had enough time to sample the NMI line.
-//		// We run another instruction (another ADC IMM) which should be interrupted by NMI.
-//		// It does not matter what the second instruction is, as long as it takes at least one cycle.
-//		TEST_METHOD(TestHardwareNMI)
-//		{
-//			uint8_t rom[0x8000];
-//			rom[0] = ADC_IMMEDIATE;
-//			rom[1] = 0x20;
-//			rom[2] = ADC_IMMEDIATE;
-//			rom[3] = 0x30;
-//			rom[0xFFFA - 0x8000] = 0x00;
-//			rom[0xFFFB - 0x8000] = 0x90;
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->setNMI(true);
-//			uint8_t p = cpu->GetStatus();
-//			RunInst();
-//			// Ensure NMI has NOT triggered. The PC should be at 0x8002 after first ADC.
-//			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-//			RunInst();
-//			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
-//			// The return address (0x8002) should be on the stack
-//			uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
-//			Assert::AreEqual((uint8_t)((p & 0xEF) | 0x20), new_p);
-//			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
-//			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
-//			Assert::AreEqual(0x8002, (hi << 8) | lo);
-//			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-//			// First ADC IMM = 2, NMI = 7
-//			Assert::IsTrue(cpu->GetCycleCount() == 9);
-//		}
-//
-//		TEST_METHOD(TestHardwareIRQImmediate)
-//		{
-//			uint8_t rom[0x8000];
-//			rom[0] = ADC_IMMEDIATE;
-//			rom[1] = 0x20;
-//			rom[0xFFFE - 0x8000] = 0x00;
-//			rom[0xFFFF - 0x8000] = 0x90;
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetIRQImmediate();
-//			cpu->ClearFlag(FLAG_INTERRUPT); // Clear interrupt flag to allow BRK to proceed
-//			uint8_t p = cpu->GetStatus();
-//			RunInst();
-//			// Now ensure BRK has triggered and PC is at IRQ vector
-//			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
-//			// The return address (0x8000) should be on the stack
-//			// It is 8000 because ADC_IMMEDIATE was interrupted.
-//			uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
-//			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
-//			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
-//			Assert::AreEqual((uint8_t)((p & 0xEF) | 0x20), new_p);
-//			Assert::AreEqual(0x8000, (hi << 8) | lo);
-//			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-//			// Just the IRQ was run = 7 cycles
-//			Assert::IsTrue(cpu->GetCycleCount() == 7);
-//		}
-//		
-//		TEST_METHOD(TestHardwareIRQ)
-//		{
-//			uint8_t rom[0x8000];
-//			rom[0] = ADC_IMMEDIATE;
-//			rom[1] = 0x20;
-//			rom[2] = ADC_IMMEDIATE;
-//			rom[3] = 0x30;
-//			rom[0xFFFE - 0x8000] = 0x00;
-//			rom[0xFFFF - 0x8000] = 0x90;
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->setIRQ(true);
-//			cpu->ClearFlag(FLAG_INTERRUPT); // Clear interrupt flag to allow BRK to proceed
-//			uint8_t p = cpu->GetStatus();
-//			RunInst();
-//			// Ensure BRK has NOT triggered. The PC should be at 0x8002 after first ADC.
-//			Assert::AreEqual((uint16_t)0x8002, cpu->GetPC());
-//			RunInst();
-//			// Now ensure BRK has triggered and PC is at IRQ vector
-//			Assert::AreEqual((uint16_t)0x9000, cpu->GetPC());
-//			// The return address (0x8002) should be on the stack
-//			uint8_t new_p = bus->read(0x0100 + cpu->GetSP() + 1);
-//			uint8_t lo = bus->read(0x0100 + cpu->GetSP() + 2);
-//			uint8_t hi = bus->read(0x0100 + cpu->GetSP() + 3);
-//			Assert::AreEqual((uint8_t)((p & 0xEF) | 0x20), new_p);
-//			Assert::AreEqual(0x8002, (hi << 8) | lo);
-//			Assert::IsTrue(cpu->GetFlag(FLAG_INTERRUPT));
-//			// First ADC IMM = 2, BRK = 7
-//			Assert::IsTrue(cpu->GetCycleCount() == 9);
-//		}
-//
-//		TEST_METHOD(TestADCImmediate1)
-//		{
-//			uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x20, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//
-//		TEST_METHOD(TestADCImmediateWithCarry)
-//		{
-//			uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetA(0x11);
-//			cpu->SetFlag(FLAG_CARRY);
-//			RunInst();
-//			// 0x11 + 0x20 + 1 (Carry) = 0x32
-//			Assert::AreEqual((uint8_t)0x32, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//
-//		TEST_METHOD(TestADCImmediateWithOverflow)
-//		{
-//			// $ef + $20 will result in overflow
-//			cpu->SetA(0xef);
-//			uint8_t rom[] = { ADC_IMMEDIATE, 0x20 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0xf, cpu->GetA());
-//			Assert::IsTrue(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//
-//		TEST_METHOD(TestADCZeroPage)
-//		{
-//			// Add what is at zero page 0x15 to A.
-//			uint8_t rom[] = { ADC_ZEROPAGE, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0015, 0x69);
-//			cpu->SetA(0x18);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x81, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//
-//		TEST_METHOD(TestADCZeroPage_X)
-//		{
-//			// Add what is at zero page 0x15 to A.
-//			uint8_t rom[] = { ADC_ZEROPAGE_X, 0x15 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x0016, 0x69);
-//			cpu->SetA(0x18);
-//			cpu->SetX(0x1);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x81, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//
-//		TEST_METHOD(TestADCAbsolute)
-//		{
-//			// I think the 6502 stores in little endian, need to double check
-//			uint8_t rom[] = { ADC_ABSOLUTE, 0x23, 0x3 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x323, 0x40);
-//			cpu->SetA(0x20);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x60, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//
-//		TEST_METHOD(TestADCNonNegative)
-//		{
-//			// I think the 6502 stores in little endian, need to double check
-//			uint8_t rom[] = { ADC_ABSOLUTE, 0x23, 0x3 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			bus->write(0x323, 0x40);
-//			cpu->SetA(0x20);
-//			cpu->SetFlag(FLAG_ZERO);
-//			RunInst();
-//			Assert::AreEqual((uint8_t)0x60, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsFalse(cpu->GetFlag(FLAG_ZERO));
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//		TEST_METHOD(TestADCImmediateNegativeResult)
-//		{
-//			uint8_t rom[] = { ADC_IMMEDIATE, 0x90 }; // 144 decimal
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetA(0x50); // 80 decimal
-//			RunInst();
-//			// 80 + 144 = 224 which is negative in signed 8-bit
-//			Assert::AreEqual((uint8_t)0xE0, cpu->GetA());
-//			Assert::IsFalse(cpu->GetFlag(FLAG_CARRY));
-//			Assert::IsTrue(cpu->GetFlag(FLAG_NEGATIVE));
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//
-//		TEST_METHOD(TestANDImmediate)
-//		{
-//			uint8_t rom[] = { AND_IMMEDIATE, 0x7 }; // 0111
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetA(0xE); // 1110
-//			RunInst();
-//			// 0x11 + 0x20 + 1 (Carry) = 0x32
-//			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-//			Assert::IsTrue(cpu->GetCycleCount() == 2);
-//		}
-//
-//		TEST_METHOD(TestANDZeroPage)
-//		{
-//			bus->write(0x0035, 0x07); // 0111
-//			uint8_t rom[] = { AND_ZEROPAGE, 0x35 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetA(0xE); // 1110
-//
-//			RunInst();
-//			// 0x11 + 0x20 + 1 (Carry) = 0x32
-//			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-//			Assert::IsTrue(cpu->GetCycleCount() == 3);
-//		}
-//
-//		TEST_METHOD(TestANDZeroPageX)
-//		{
-//			bus->write(0x0035, 0x07); // 0111
-//			uint8_t rom[] = { AND_ZEROPAGE_X, 0x34 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetX(0x1);
-//			cpu->SetA(0xE); // 1110
-//
-//			RunInst();
-//			// 0x11 + 0x20 + 1 (Carry) = 0x32
-//			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//
-//		TEST_METHOD(TestANDAbsolute)
-//		{
-//			bus->write(0x0235, 0x07); // 0111
-//			uint8_t rom[] = { AND_ABSOLUTE, 0x35, 0x02 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetA(0xE); // 1110
-//
-//			RunInst();
-//			// 0x11 + 0x20 + 1 (Carry) = 0x32
-//			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//
-//		TEST_METHOD(TestANDAbsoluteX)
-//		{
-//			bus->write(0x0235, 0x07); // 0111
-//			uint8_t rom[] = { AND_ABSOLUTE_X, 0x33, 0x02 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetA(0xE); // 1110
-//			cpu->SetX(0x2);
-//
-//			RunInst();
-//			// 0x11 + 0x20 + 1 (Carry) = 0x32
-//			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//
-//		TEST_METHOD(TestANDAbsoluteY)
-//		{
-//			bus->write(0x0235, 0x07); // 0111
-//			uint8_t rom[] = { AND_ABSOLUTE_Y, 0x33, 0x02 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetA(0xE); // 1110
-//			cpu->SetY(0x2);
-//
-//			RunInst();
-//			// 0x11 + 0x20 + 1 (Carry) = 0x32
-//			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-//			Assert::IsTrue(cpu->GetCycleCount() == 4);
-//		}
-//
-//		TEST_METHOD(TestANDIndexedIndirect)
-//		{
-//			bus->write(0x0035, 0x35);
-//			bus->write(0x0036, 0x02); // Pointer to 0x0235
-//			bus->write(0x0235, 0x07); // 0111
-//			uint8_t rom[] = { AND_INDEXEDINDIRECT, 0x33 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetA(0xE); // 1110
-//			cpu->SetX(0x2);
-//
-//			RunInst();
-//			// 0x11 + 0x20 + 1 (Carry) = 0x32
-//			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-//			Assert::IsTrue(cpu->GetCycleCount() == 6);
-//		}
-//		TEST_METHOD(TestANDIndirectIndexed)
-//		{
-//			bus->write(0x0035, 0x35);
-//			bus->write(0x0036, 0x02); // Pointer to 0x0235
-//			bus->write(0x0237, 0x07); // 0111
-//			uint8_t rom[] = { AND_INDIRECTINDEXED, 0x35 };
-//			cart->mapper->SetPRGRom(rom, sizeof(rom));
-//			cpu->SetA(0xE); // 1110
-//			cpu->SetY(0x2);
-//			RunInst();
-//			// 0x11 + 0x20 + 1 (Carry) = 0x32
-//			Assert::AreEqual((uint8_t)0x6, cpu->GetA()); // 0110
-//			Assert::IsTrue(cpu->GetCycleCount() == 5);
-//		}
+
 //
 //		TEST_METHOD(TestASLAccumulator)
 //		{
