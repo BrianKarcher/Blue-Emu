@@ -37,7 +37,7 @@ void MapperBase::SetPrgPage(uint16_t pageIndex, uint8_t bank) {
 	uint16_t endAddr = startAddr + _prgPageSize;
 	// Calculate the offset into CHR ROM and mask it against total size
 	// to prevent out-of-bounds memory access.
-	uint32_t totalChrSize = (uint32_t)m_prgRomData.size();
+	uint32_t totalChrSize = (uint32_t)m_prgRomDataSize;
 	uint32_t bankOffset = ((uint32_t)bank * _prgPageSize) % totalChrSize;
 
 	SetPrgRange(startAddr, endAddr, bankOffset);
@@ -67,10 +67,10 @@ void MapperBase::SetChrPage(uint16_t pageIndex, uint8_t bank) {
 	uint16_t endAddr = startAddr + _chrPageSize;
 	// Calculate the offset into CHR ROM and mask it against total size
 	// to prevent out-of-bounds memory access.
-	uint32_t totalChrSize = (uint32_t)m_chrData.size();
+	uint32_t totalChrSize = (uint32_t)m_chrDataSize;
 	uint32_t bankOffset = ((uint32_t)bank * _chrPageSize) % totalChrSize;
 
-	SetChrRange(startAddr, endAddr, m_chrData.data(), bankOffset);
+	SetChrRange(startAddr, endAddr, m_chrData, bankOffset);
 }
 
 void MapperBase::SetChrRange(uint16_t startInclusive, uint16_t endExclusive, uint8_t* source, uint32_t bankOffset) {

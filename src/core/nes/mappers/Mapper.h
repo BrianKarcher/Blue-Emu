@@ -10,9 +10,11 @@ class NesBus;
 
 class Mapper : public NesMemoryMapper {
 public:
-	std::vector<uint8_t> m_prgRomData;
+	uint8_t *m_prgRomData = nullptr;
+	size_t m_prgRomDataSize;
 	std::vector<uint8_t> m_prgRamData;
-	std::vector<uint8_t> m_chrData;
+	uint8_t *m_chrData = nullptr;
+	size_t m_chrDataSize;
 	bool isCHRWritable;
 
 	virtual void initialize(ines_file_t& data);

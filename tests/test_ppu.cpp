@@ -17,6 +17,8 @@ namespace test_ppu
             nes = new Nes(ctx);
             cart = nes->cart_;
             cart->mapper = new NROM(cart);
+            ines_file_t ines_loader;
+            cart->mapper->initialize(ines_loader);
             bus = nes->bus_;
             cart->mapper->register_memory(*bus);
             cart->mapper->m_prgRamData.resize(0x2000);

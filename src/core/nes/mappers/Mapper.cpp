@@ -36,42 +36,53 @@ void Mapper::register_memory(NesBus& bus) {
 }
 
 void Mapper::initialize(ines_file_t& inesFile) {
-	m_prgRomData.clear();
-	for (int i = 0; i < inesFile.prg_rom->size; i++) {
-		m_prgRomData.push_back(inesFile.prg_rom->data[i]);
-	}
-	m_chrData.clear();
+	m_prgRomDataSize = inesFile.prg_rom->size;
+
 	if (inesFile.chr_rom->size == 0) {
 		isCHRWritable = true;
 		// No CHR ROM present; allocate 8KB of CHR RAM
-		m_chrData.resize(0x2000, 0);
+		m_chrDataSize = 0x2000;
 	}
 	else {
 		isCHRWritable = false;
-		for (int i = 0; i < inesFile.chr_rom->size; i++) {
-			m_chrData.push_back(inesFile.chr_rom->data[i]);
-		}
+		m_chrDataSize = inesFile.chr_rom->size;
 	}
+	
+	SetPRGRom(inesFile.prg_rom->data, m_prgRomDataSize);
+	SetCHRRom(inesFile.chr_rom->data, m_chrDataSize);
 }
 
-// For testing purposes
+// An alternate is to have the caller manage the memory and just pass in pointers
+// But this way we can ensure the memory is always owned by the mapper and not accidentally freed by the caller.
 void Mapper::SetCHRRom(uint8_t* data, size_t size) {
-	m_chrData.resize(size);
-	memcpy(m_chrData.data(), data, size);
+	if (!m_chrData)
+	{
+		m_chrData = (uint8_t*)malloc(m_chrDataSize * sizeof(uint8_t));
+	}
+	else
+	{
+		m_chrData = (uint8_t*)realloc(m_chrData, m_chrDataSize * sizeof(uint8_t));
+	}
+	memcpy(m_chrData, data, size);
 }
 
-// For testing purposes
 void Mapper::SetPRGRom(uint8_t* data, size_t size) {
-	if (m_prgRomData.size() < size) {
-		m_prgRomData.resize(size);
-	}
 	// Pad PRG data to at least 32KB
 	// We need to make sure the vectors exist (IRQ vectors at $FFFA-$FFFF)
 	// Even if they're zeroes.
-	if (m_prgRomData.size() < 0x8000) {
-		m_prgRomData.resize(0x8000);
+	if (size < 0x8000) {
+		size = 0x8000;
 	}
-	memcpy(m_prgRomData.data(), data, size);
+	if (!m_prgRomData)
+	{
+		m_prgRomData = (uint8_t*)malloc(size * sizeof(uint8_t));
+	}
+	else
+	{
+		m_prgRomData = (uint8_t*)realloc(m_prgRomData, size * sizeof(uint8_t));
+	}
+	
+	memcpy(m_prgRomData, data, size);
 }
 
 void Mapper::Serialize(Serializer& serializer) {

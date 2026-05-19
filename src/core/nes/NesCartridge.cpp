@@ -124,6 +124,7 @@ void NesCartridge::saveSRAM() {
 void NesCartridge::unload() {
     saveSRAM();
     if (mapper) {
+		// Scope issue, move this into the mapper desconstructor?
         mapper->m_prgRomData.clear();
         mapper->m_chrData.clear();
         mapper->m_prgRamData.clear();

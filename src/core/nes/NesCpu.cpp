@@ -32,7 +32,7 @@ bool NesCpu::ShouldPause() {
 		// Notify the Debugger UI thread
 		//PostMessage(dbgCtx.hwndDbg, WM_USER_BREAKPOINT_HIT, 0, 0);
 		dbgCtx.hit_breakpoint.store(true);
-		ppu.UpdateState();
+		ppu.UpdateDebuggerState();
 	}
 
 	if (dbgCtx.is_paused.load(std::memory_order_relaxed)) {
