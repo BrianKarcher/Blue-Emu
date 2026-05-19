@@ -100,7 +100,6 @@ public:
 	void connectNesBus(NesBus* bus) { this->bus = bus; }
 	RendererLoopy* renderer;
 	void reset();
-	void step();
 	uint8_t read(uint16_t address);
 	uint8_t peek(uint16_t address);
 	void write(uint16_t address, uint8_t value);
@@ -153,7 +152,7 @@ public:
 		}
 	}
 	void setBuffer(uint32_t* buf) { buffer = buf; }
-	void UpdateState();
+	void UpdateDebuggerState();
 	bool isFrameTicked();
 
 	void Serialize(Serializer& serializer);

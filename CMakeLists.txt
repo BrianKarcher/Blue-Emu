@@ -127,7 +127,7 @@ enable_testing()
 
 find_package(GTest CONFIG REQUIRED)
 
-add_executable(nes_emu_tests tests/test_cpu.cpp)
+add_executable(nes_emu_tests tests/test_cpu.cpp tests/test_ppu.cpp)
 
 target_link_libraries(nes_emu_tests PRIVATE
     nes_core

@@ -56,12 +56,6 @@ void NesPpu::clearBuffer(uint32_t* buffer) {
 	}
 }
 
-void NesPpu::step()
-{
-	// Emulate one NesPpu cycle here
-
-}
-
 uint8_t NesPpu::read(uint16_t address) {
 	return read_register(0x2000 + (address & 0x7));
 }
@@ -378,7 +372,7 @@ void NesPpu::write_vram(uint16_t addr, uint8_t value)
 	}
 }
 
-void NesPpu::UpdateState() {
+void NesPpu::UpdateDebuggerState() {
 	dbgContext->ppuState.ctrl = m_ppuCtrl;
 	dbgContext->ppuState.mask = m_ppuMask;
 	dbgContext->ppuState.status = m_ppuStatus;
@@ -403,7 +397,7 @@ void NesPpu::UpdateState() {
 void NesPpu::Clock() {
 	// TODO Make the scanline and dot configurable since banks or scrolling may change during the frame render.
 	if (renderer->m_scanline == 0 && renderer->dot == 0) {
-		UpdateState();
+		UpdateDebuggerState();
 	}
 	renderer->clock(buffer);
 }

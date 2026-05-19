@@ -1,5 +1,94 @@
+#include <gtest/gtest.h>
+#include <Nes.h>
+#include "NesBus.h"
+#include "NesCpu.h"
+#include "NesCartridge.h"
+#include "NesPpu.h"
+#include "Mapper.h"
+#include "NROM.h"
+#include "SharedContext.h"
+#include "RendererLoopy.h"
+
+namespace test_ppu
+{
+    class PPUEnv : public ::testing::Test {
+    public:
+        void SetUp() override {
+            nes = new Nes(ctx);
+            cart = nes->cart_;
+            cart->mapper = new NROM(cart);
+            bus = nes->bus_;
+            cart->mapper->register_memory(*bus);
+            cart->mapper->m_prgRamData.resize(0x2000);
+            cpu = nes->cpu_;
+            cpu->init_cpu();
+            uint8_t rom[0x8000];
+            cart->mapper->SetPRGRom(rom, sizeof(rom));
+            uint8_t chr[0x2000];
+            cart->mapper->SetCHRRom(chr, sizeof(chr));
+            cart->mapper->RecomputeMappings();
+            cpu->PowerCycle();
+            cpu->SetPC(0x8000);
+			ppu = nes->ppu_;
+        }
+        void TearDown() override {}
+        void RunInst() {
+            bool first = true;
+            while (first || !cpu->inst_complete) {
+                first = false;
+                cpu->cpu_tick();
+            }
+        }
+        SharedContext ctx;
+        Nes* nes;
+        NesBus* bus;
+        NesCpu* cpu;
+        NesCartridge* cart;
+		NesPpu* ppu;
+    };
+
+    TEST_F(PPUEnv, PartialSecondaryOAMClearTest)
+    {
+		ppu->renderer->fill_secondary_oam(0x00); // Clear secondary OAM with 0x00
+		// Clear half of the secondary OAM with 0xFF to simulate sprite 0-3 being cleared, but sprite 4-7 still present
+        for (int i = 0; i < 32; ++i)
+        {
+            ppu->Clock();
+        }
+
+		auto secondary_oam = ppu->renderer->get_secondary_oam();
+		// New sprites 0-3 should be cleared to 0xFF (indicating no sprite)
+		for (int i = 0; i < 4; ++i)
+        {
+            EXPECT_EQ(0xFF, secondary_oam[i].x);
+			EXPECT_EQ(0xFF, secondary_oam[i].y);
+			EXPECT_EQ(0xFF, secondary_oam[i].tileIndex);
+			EXPECT_EQ(0xFF, secondary_oam[i].attributes);
+            EXPECT_FALSE(secondary_oam[i].isSprite0);
+        }
+		// Remaining sprites should still be cleared to 0x00
+        for (int i = 5; i < 8; ++i)
+        {
+            EXPECT_EQ(0x00, secondary_oam[i].x);
+            EXPECT_EQ(0x00, secondary_oam[i].y);
+            EXPECT_EQ(0x00, secondary_oam[i].tileIndex);
+            EXPECT_EQ(0x00, secondary_oam[i].attributes);
+            EXPECT_FALSE(secondary_oam[i].isSprite0);
+        }
+        
+        EXPECT_EQ(1, 1);
+    }
+
+    int main(int argc, char** argv)
+    {
+        ::testing::InitGoogleTest(&argc, argv);
+        return RUN_ALL_TESTS();
+    }
+
+}
+
 //#include <cstdlib>
-#include "pch.h"
+//#include "pch.h"
 //#include "CppUnitTest.h"
 //#include "CPU.h"
 //#include "Cartridge.h"

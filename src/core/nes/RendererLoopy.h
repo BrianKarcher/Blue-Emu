@@ -102,6 +102,16 @@ public:
     void Serialize(Serializer& serializer);
 	void Deserialize(Serializer& serializer);
 
+    void fill_secondary_oam(uint8_t value)
+    {
+		Sprite emptySprite = { value, value, value, value, false }; // 0xFF indicates no sprite
+        secondaryOAM.fill(emptySprite);
+    }
+
+    std::array<Sprite, 8> get_secondary_oam() const {
+        return secondaryOAM;
+	}
+
 private:
     NesBus* m_bus;
     NesPpu* m_ppu;
