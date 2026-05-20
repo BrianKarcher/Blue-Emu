@@ -3,7 +3,21 @@
 #include <Windows.h>
 
 void MapperBase::initialize(ines_file_t& data) {
-	Mapper::initialize(data);
+	m_prgRomDataSize = data.prg_rom->size;
+
+	if (data.chr_rom->size == 0) {
+		isCHRWritable = true;
+		// No CHR ROM present; allocate 8KB of CHR RAM
+		m_chrDataSize = 0x2000;
+	}
+	else {
+		isCHRWritable = false;
+		m_chrDataSize = data.chr_rom->size;
+	}
+
+	SetPRGRom(data.prg_rom->data, m_prgRomDataSize);
+	SetCHRRom(data.chr_rom->data, m_chrDataSize);
+
 	for (int i = 0; i < 0x20; i++) {
 		_isPpuPageWritable[i] = isCHRWritable;
 	}
@@ -15,6 +29,42 @@ void MapperBase::initialize(ines_file_t& data) {
 	_prgRomSize = data.header.prg_rom_size * 16384;
 	_chrRomSize = data.header.chr_rom_size * 8192;
 	RecomputeMappings();
+}
+
+// An alternate is to have the caller manage the memory and just pass in pointers
+// But this way we can ensure the memory is always owned by the mapper and not accidentally freed by the caller.
+void MapperBase::SetCHRRom(uint8_t* data, size_t size) {
+	if (!m_chrData)
+	{
+		m_chrData = (uint8_t*)malloc(size);
+	}
+	else
+	{
+		m_chrData = (uint8_t*)realloc(m_chrData, size);
+	}
+	if (data)
+	{
+		memcpy(m_chrData, data, size);
+	}
+}
+
+void MapperBase::SetPRGRom(uint8_t* data, size_t size) {
+	// Pad PRG data to at least 32KB
+	// We need to make sure the vectors exist (IRQ vectors at $FFFA-$FFFF)
+	// Even if they're zeroes.
+	if (size < 0x8000) {
+		size = 0x8000;
+	}
+	if (!m_prgRomData)
+	{
+		m_prgRomData = (uint8_t*)malloc(size * sizeof(uint8_t));
+	}
+	else
+	{
+		m_prgRomData = (uint8_t*)realloc(m_prgRomData, size * sizeof(uint8_t));
+	}
+
+	memcpy(m_prgRomData, data, size);
 }
 
 // ---------------- Debug helper ----------------
@@ -178,11 +228,23 @@ void MapperBase::shutdown() {
 }
 
 void MapperBase::Serialize(Serializer& serializer) {
-	Mapper::Serialize(serializer);
+	serializer.WriteVector(m_prgRamData);
+	if (isCHRWritable) {
+		for (int i = 0; i < m_chrDataSize; ++i)
+		{
+			serializer.Write(m_chrData[i]);
+		}
+	}
 	serializer.WriteVector(_vram);
 }
 
 void MapperBase::Deserialize(Serializer& serializer) {
-	Mapper::Deserialize(serializer);
+	serializer.ReadVector(m_prgRamData);
+	if (isCHRWritable) {
+		for (int i = 0; i < m_chrDataSize; ++i)
+		{
+			serializer.Read(m_chrData[i]);
+		}
+	}
 	serializer.ReadVector(_vram);
 }

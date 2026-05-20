@@ -42,7 +42,7 @@ public:
 	virtual void RecomputePrgMappings() = 0;
 	virtual void RecomputeChrMappings() = 0;
 	virtual void RecomputeMirrorModeMapping();
-	virtual void initialize(ines_file_t& data) override;
+	virtual void initialize(ines_file_t& data);
 	void SetPrgPageSize(uint16_t pageSize);
 	void SetPrgPage(uint16_t pageIndex, uint8_t bank);
 	void SetPrgRange(uint16_t startInclusive, uint16_t endExclusive, uint32_t bankOffset);
@@ -71,8 +71,11 @@ public:
 	uint16_t _nametableRamSize = 0x800; // Default 2 KB nametable RAM size
 	std::vector<uint8_t> _vram; // 2 KB VRAM used to hold nametables. Some mappers may override this.
 
-	virtual void Serialize(Serializer& serializer) override;
-	virtual void Deserialize(Serializer& serializer) override;
+	virtual void Serialize(Serializer& serializer);
+	virtual void Deserialize(Serializer& serializer);
+
+	void SetCHRRom(uint8_t* data, size_t size);
+	void SetPRGRom(uint8_t* data, size_t size);
 private:
 	MirrorMode m_mirrorMode;
 };
