@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include "Mapper.h"
 #include "MapperBase.h"
 #include "INESLoader.h"
 

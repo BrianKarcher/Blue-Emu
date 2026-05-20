@@ -1,4 +1,5 @@
 #include "MapperBase.h"
+#include "NesBus.h"
 #include "Serializer.h"
 #include <Windows.h>
 
@@ -29,6 +30,40 @@ void MapperBase::initialize(ines_file_t& data) {
 	_prgRomSize = data.header.prg_rom_size * 16384;
 	_chrRomSize = data.header.chr_rom_size * 8192;
 	RecomputeMappings();
+}
+
+uint8_t MapperBase::read(uint16_t address) {
+	if (address < 0x8000) {
+		// TODO : Improve the performance of this
+		return m_prgRamData[address - 0x6000];
+	}
+	else {
+		return readPRGROM(address); //m_prgRomData[address];
+	}
+}
+
+uint8_t MapperBase::peek(uint16_t address) {
+	if (address < 0x8000) {
+		// TODO : Improve the performance of this
+		return m_prgRamData[address - 0x6000];
+	}
+	else {
+		return readPRGROM(address); //m_prgRomData[address];
+	}
+}
+
+void MapperBase::write(uint16_t address, uint8_t value) {
+	if (address < 0x8000) {
+		m_prgRamData[address - 0x6000] = value;
+	}
+	else {
+		writeRegister(address, value, 0);
+	}
+}
+
+void MapperBase::register_memory(NesBus& bus) {
+	bus.ReadRegisterAdd(0x6000, 0xFFFF, this);
+	bus.WriteRegisterAdd(0x6000, 0xFFFF, this);
 }
 
 // An alternate is to have the caller manage the memory and just pass in pointers

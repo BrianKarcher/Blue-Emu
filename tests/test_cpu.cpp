@@ -3,7 +3,6 @@
 #include "NesBus.h"
 #include "NesCpu.h"
 #include "NesCartridge.h"
-#include "Mapper.h"
 #include "NROM.h"
 #include "SharedContext.h"
 

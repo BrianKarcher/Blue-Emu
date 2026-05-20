@@ -4,7 +4,7 @@
 #include "NesBus.h"
 #include "NesPpu.h"
 #include "RendererLoopy.h"
-#include "Mapper.h"
+#include "Serializer.h"
 
 #define BANK_SIZE_CHR 0x400 // 1KB
 #define BANK_SIZE_PRG 0x2000 // 8KB

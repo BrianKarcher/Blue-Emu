@@ -9,7 +9,6 @@
 #include "MapperBase.h"
 #include "Serializer.h"
 #include "DebuggerContext.h"
-#include "Mapper.h"
 #include <array>
 #include "NesCartridge.h"
 #include "Nes.h"

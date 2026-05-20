@@ -4,6 +4,7 @@
 #include <string>
 #include <bitset>
 #include "NesCpu.h"
+#include "Serializer.h"
 
 MMC1::MMC1(NesCartridge* cartridge, NesCpu& c) : cpu(c) {
 	MapperBase::SetPrgPageSize(0x4000);

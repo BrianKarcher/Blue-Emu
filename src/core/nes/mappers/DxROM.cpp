@@ -1,5 +1,6 @@
 #include "DxROM.h"
 #include "MapperBase.h"
+#include "Serializer.h"
 
 void DxROM::initialize(ines_file_t& data) {
 	if (data.header.flags6 & FLAG_6_NAMETABLE_LAYOUT) {

@@ -1,8 +1,10 @@
 #pragma once
-#include "Mapper.h"
 #include <array>
 #include <cstdint>
 #include <stdarg.h>
+#include <vector>
+#include "NesMemoryMapper.h"
+#include "INESLoader.h"
 
 //#define MAPPERDEBUG
 
@@ -12,8 +14,11 @@
 #define LOG(...) do {} while(0) // completely removed by compiler
 #endif
 
+class NesBus;
+class Serializer;
+
 // TODO : Integrate common mapper functionality here
-class MapperBase : public Mapper {
+class MapperBase : public NesMemoryMapper {
 	// Converting all PRG and CHR mapping to use pages.
 	// For simplicity across all mappers. All mappers have window sizes >= 256 bytes.
 	// This also increases performance by reducing the number of calculations needed for each read/write.
@@ -36,6 +41,26 @@ public:
 	uint16_t _chrRomSize = 0;
 	uint8_t _chrPageCount = 0;
 	const uint16_t _nametablePageSize = 0x400;
+
+	uint8_t* m_prgRomData = nullptr;
+	size_t m_prgRomDataSize;
+	std::vector<uint8_t> m_prgRamData;
+	uint8_t* m_chrData = nullptr;
+	size_t m_chrDataSize;
+	bool isCHRWritable;
+
+	virtual void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle) = 0;
+	//virtual inline uint8_t readPRGROM(uint16_t addr) const = 0;
+	//virtual void writePRGROM(uint16_t address, uint8_t data, uint64_t currentCycle) = 0;
+	//virtual inline uint8_t readCHR(uint16_t addr) = 0;
+	//virtual void writeCHR(uint16_t addr, uint8_t data) = 0;
+	//virtual void shutdown() = 0;
+	virtual bool IrqPending() { return false; }
+
+	uint8_t read(uint16_t address);
+	uint8_t peek(uint16_t address);
+	void write(uint16_t address, uint8_t value);
+	void register_memory(NesBus& bus);
 
 	inline void dbg(const wchar_t* fmt, ...) const;
 	virtual void RecomputeMappings();

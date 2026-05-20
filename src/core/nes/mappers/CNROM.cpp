@@ -1,4 +1,5 @@
 #include "CNROM.h"
+#include "Serializer.h"
 
 CNROM::CNROM() : MapperBase()
 {

@@ -1,6 +1,7 @@
 #include "MMC2Mapper.h"
 #include "NesBus.h"
 #include "NesCartridge.h"
+#include "Serializer.h"
 
 MMC2Mapper::MMC2Mapper(NesBus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b), cart(bus.cart) {
     MapperBase::SetPrgPageSize(0x2000); // MMC2 uses 8KB PRG pages

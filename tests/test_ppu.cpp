@@ -4,7 +4,6 @@
 #include "NesCpu.h"
 #include "NesCartridge.h"
 #include "NesPpu.h"
-#include "Mapper.h"
 #include "NROM.h"
 #include "SharedContext.h"
 #include "RendererLoopy.h"

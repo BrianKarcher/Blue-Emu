@@ -47,7 +47,6 @@ add_library(nes_core STATIC
     ${MAPPERS_DIR}/AxROMMapper.cpp
     ${MAPPERS_DIR}/CNROM.cpp
     ${MAPPERS_DIR}/DxROM.cpp
-    ${MAPPERS_DIR}/Mapper.cpp
     ${MAPPERS_DIR}/MapperBase.cpp
     ${MAPPERS_DIR}/MMC1.cpp
     ${MAPPERS_DIR}/MMC2Mapper.cpp
