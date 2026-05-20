@@ -170,7 +170,11 @@ void MapperBase::SetMirrorMode(MirrorMode mirrorMode) {
 }
 
 void MapperBase::shutdown() {
-
+	free(m_prgRomData);
+	m_prgRomData = NULL;
+	free(m_chrData);
+	m_chrData = NULL;
+	m_prgRamData.clear();
 }
 
 void MapperBase::Serialize(Serializer& serializer) {

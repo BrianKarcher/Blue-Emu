@@ -88,13 +88,19 @@ void Mapper::SetPRGRom(uint8_t* data, size_t size) {
 void Mapper::Serialize(Serializer& serializer) {
 	serializer.WriteVector(m_prgRamData);
 	if (isCHRWritable) {
-		serializer.WriteVector(m_chrData);
+		for (int i = 0; i < m_chrDataSize; ++i)
+		{
+			serializer.Write(m_chrData[i]);
+		}
 	}
 }
 
 void Mapper::Deserialize(Serializer& serializer) {
 	serializer.ReadVector(m_prgRamData);
 	if (isCHRWritable) {
-		serializer.ReadVector(m_chrData);
+		for (int i = 0; i < m_chrDataSize; ++i)
+		{
+			serializer.Read(m_chrData[i]);
+		}
 	}
 }
