@@ -31,7 +31,7 @@ public:
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	void RecomputePrgMappings() override;
 	void RecomputeChrMappings() override;
-	void initialize(ines_file_t& data) override;
+	void initialize(uint8_t* prg_rom_data, size_t prg_rom_size, uint8_t* chr_rom_data, size_t chr_rom_size, MirrorMode mirror_mode) override;
 
 	inline void dbg(const wchar_t* fmt, ...) const;
 	BoardType boardType;

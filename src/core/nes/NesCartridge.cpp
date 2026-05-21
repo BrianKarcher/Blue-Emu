@@ -167,7 +167,7 @@ void NesCartridge::LoadROM(const std::string& filePath) {
 
     uint8_t mapperNum = inesFile.header.flags6 >> 4;
     SetMapper(mapperNum, inesFile);
-	mapper->initialize(inesFile);
+	mapper->initialize(inesFile.prg_rom->data, inesFile.prg_rom->size, inesFile.chr_rom->data, inesFile.chr_rom->size, inesFile.header.flags6 & 0x01 ? MapperBase::MirrorMode::VERTICAL : MapperBase::MirrorMode::HORIZONTAL);
 	mapper->register_memory(*m_bus);
     loadSRAM();
     
@@ -196,7 +196,7 @@ void NesCartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
 		mapper = new CNROM();
         break;
     case 4:
-        mapper = new MMC3(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
+        mapper = new MMC3(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size, inesFile.header.flags6 & FLAG_6_NAMETABLE_LAYOUT);
         break;
     case 7:
         mapper = new AxROMMapper(this, inesFile.header.prg_rom_size);
@@ -205,7 +205,7 @@ void NesCartridge::SetMapper(uint8_t value, ines_file_t& inesFile) {
 		mapper = new MMC2Mapper(*m_bus, inesFile.header.prg_rom_size, inesFile.header.chr_rom_size);
         break;
     case 206:
-        mapper = new DxROM();
+        mapper = new DxROM(inesFile.header.flags6 & FLAG_6_NAMETABLE_LAYOUT);
         break;
     default:
         mapper = new NROM(this);

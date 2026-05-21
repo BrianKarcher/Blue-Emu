@@ -3,21 +3,21 @@
 #include "Serializer.h"
 #include <Windows.h>
 
-void MapperBase::initialize(ines_file_t& data) {
-	m_prgRomDataSize = data.prg_rom->size;
+void MapperBase::initialize(uint8_t *prg_rom_data, size_t prg_rom_size, uint8_t *chr_rom_data, size_t chr_rom_size, MirrorMode mirror_mode) {
+	m_prgRomDataSize = prg_rom_size;
 
-	if (data.chr_rom->size == 0) {
+	if (chr_rom_size == 0) {
 		isCHRWritable = true;
 		// No CHR ROM present; allocate 8KB of CHR RAM
 		m_chrDataSize = 0x2000;
 	}
 	else {
 		isCHRWritable = false;
-		m_chrDataSize = data.chr_rom->size;
+		m_chrDataSize = chr_rom_size;
 	}
 
-	SetPRGRom(data.prg_rom->data, m_prgRomDataSize);
-	SetCHRRom(data.chr_rom->data, m_chrDataSize);
+	SetPRGRom(prg_rom_data, m_prgRomDataSize);
+	SetCHRRom(chr_rom_data, m_chrDataSize);
 
 	for (int i = 0; i < 0x20; i++) {
 		_isPpuPageWritable[i] = isCHRWritable;
@@ -25,45 +25,12 @@ void MapperBase::initialize(ines_file_t& data) {
 	for (int i = 0x20; i < 0x100; i++) {
 		_isPpuPageWritable[i] = true;
 	}
-	_vram.resize(_nametableRamSize);
-	m_mirrorMode = data.header.flags6 & 0x01 ? VERTICAL : HORIZONTAL;
-	_prgRomSize = data.header.prg_rom_size * 16384;
-	_chrRomSize = data.header.chr_rom_size * 8192;
+	
+	m_mirrorMode = mirror_mode;
+	//_prgRomSize = data.header.prg_rom_size * 16384;
+	//_chrRomSize = data.header.chr_rom_size * 8192;
 	RecomputeMappings();
-}
-
-uint8_t MapperBase::read(uint16_t address) {
-	if (address < 0x8000) {
-		// TODO : Improve the performance of this
-		return m_prgRamData[address - 0x6000];
-	}
-	else {
-		return readPRGROM(address); //m_prgRomData[address];
-	}
-}
-
-uint8_t MapperBase::peek(uint16_t address) {
-	if (address < 0x8000) {
-		// TODO : Improve the performance of this
-		return m_prgRamData[address - 0x6000];
-	}
-	else {
-		return readPRGROM(address); //m_prgRomData[address];
-	}
-}
-
-void MapperBase::write(uint16_t address, uint8_t value) {
-	if (address < 0x8000) {
-		m_prgRamData[address - 0x6000] = value;
-	}
-	else {
-		writeRegister(address, value, 0);
-	}
-}
-
-void MapperBase::register_memory(NesBus& bus) {
-	bus.ReadRegisterAdd(0x6000, 0xFFFF, this);
-	bus.WriteRegisterAdd(0x6000, 0xFFFF, this);
+	initialize_vram();
 }
 
 // An alternate is to have the caller manage the memory and just pass in pointers
@@ -102,6 +69,44 @@ void MapperBase::SetPRGRom(uint8_t* data, size_t size) {
 	memcpy(m_prgRomData, data, size);
 }
 
+void MapperBase::initialize_vram() {
+	_vram.resize(_nametableRamSize);
+}
+
+uint8_t MapperBase::read(uint16_t address) {
+	if (address < 0x8000) {
+		// TODO : Improve the performance of this
+		return m_prgRamData[address - 0x6000];
+	}
+	else {
+		return readPRGROM(address); //m_prgRomData[address];
+	}
+}
+
+uint8_t MapperBase::peek(uint16_t address) {
+	if (address < 0x8000) {
+		// TODO : Improve the performance of this
+		return m_prgRamData[address - 0x6000];
+	}
+	else {
+		return readPRGROM(address); //m_prgRomData[address];
+	}
+}
+
+void MapperBase::write(uint16_t address, uint8_t value) {
+	if (address < 0x8000) {
+		m_prgRamData[address - 0x6000] = value;
+	}
+	else {
+		writeRegister(address, value, 0);
+	}
+}
+
+void MapperBase::register_memory(NesBus& bus) {
+	bus.ReadRegisterAdd(0x6000, 0xFFFF, this);
+	bus.WriteRegisterAdd(0x6000, 0xFFFF, this);
+}
+
 // ---------------- Debug helper ----------------
 inline void MapperBase::dbg(const wchar_t* fmt, ...) const {
 	wchar_t buf[512];
@@ -114,7 +119,7 @@ inline void MapperBase::dbg(const wchar_t* fmt, ...) const {
 
 void MapperBase::SetPrgPageSize(uint16_t pageSize) {
 	_prgPageSize = pageSize;
-	_prgPageCount = _prgRomSize / _prgPageSize;
+	_prgPageCount = m_prgRomDataSize / _prgPageSize;
 }
 
 void MapperBase::SetPrgPage(uint16_t pageIndex, uint8_t bank) {
@@ -129,7 +134,7 @@ void MapperBase::SetPrgPage(uint16_t pageIndex, uint8_t bank) {
 }
 
 void MapperBase::SetPrgRange(uint16_t startInclusive, uint16_t endExclusive, uint32_t bankOffset) {
-	// We shift by 8 because the _chrPages array is indexed by 256-byte chunks
+	// We shift by 8 because the _prgPages array is indexed by 256-byte chunks
 	// (0x2000 NesPpu range / 256 bytes = 32 entries)
 	uint8_t startPage = startInclusive >> 8;
 	uint8_t endPage = endExclusive >> 8;
@@ -144,7 +149,7 @@ void MapperBase::SetPrgRange(uint16_t startInclusive, uint16_t endExclusive, uin
 
 void MapperBase::SetChrPageSize(uint16_t pageSize) {
 	_chrPageSize = pageSize;
-	_chrPageCount = _chrRomSize / _chrPageSize;
+	_chrPageCount = m_chrDataSize / _chrPageSize;
 }
 
 void MapperBase::SetChrPage(uint16_t pageIndex, uint8_t bank) {

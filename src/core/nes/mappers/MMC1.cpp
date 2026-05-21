@@ -19,11 +19,10 @@ MMC1::MMC1(NesCartridge* cartridge, NesCpu& c) : cpu(c) {
 	this->cartridge = cartridge;
 }
 
-void MMC1::initialize(ines_file_t& data) {
-	prgBank16kCount = data.header.prg_rom_size;
+void MMC1::initialize(uint8_t* prg_rom_data, size_t prg_rom_size, uint8_t* chr_rom_data, size_t chr_rom_size, MirrorMode mirror_mode) {
+	prgBank16kCount = prg_rom_size / _prgPageSize;
 	suromPrgOuterBank = 0;
-	// Bank counts are in 4KB's, chr_rom_size is in 8KB units.
-	chrBankCount = data.header.chr_rom_size * 2;
+	chrBankCount = chr_rom_size / _chrPageSize;
 	// Detect board type from PRG/CHR configuration
 	if (prgBank16kCount == 4 && chrBankCount == 4) {
 		boardType = BoardType::SAROM;   // 64KB PRG, 16KB CHR-ROM
@@ -37,7 +36,7 @@ void MMC1::initialize(ines_file_t& data) {
 	else {
 		boardType = BoardType::GenericMMC1;
 	}
-	MapperBase::initialize(data);
+	MapperBase::initialize(prg_rom_data, prg_rom_size, chr_rom_data, chr_rom_size, mirror_mode);
 }
 
 // ---------------- Debug helper ----------------

@@ -23,7 +23,7 @@ inline void MMC3::dbg(const wchar_t* fmt, ...) {
 #endif
 }
 
-MMC3::MMC3(NesBus& b, uint8_t prgRomSize, uint8_t chrRomSize) : bus(b), cpu(b.cpu) {
+MMC3::MMC3(NesBus& b, uint8_t prgRomSize, uint8_t chrRomSize, bool alternative_nametable_layout) : bus(b), cpu(b.cpu), alternative_nametable_layout(alternative_nametable_layout) {
 	MapperBase::SetPrgPageSize(0x2000);
 	MapperBase::SetChrPageSize(0x400);
 	renderLoopy = bus.ppu.renderer;
@@ -58,15 +58,15 @@ MMC3::~MMC3() {
 
 }
 
-void MMC3::initialize(ines_file_t& data) {
-	if (data.header.flags6 & FLAG_6_NAMETABLE_LAYOUT) {
+void MMC3::initialize(uint8_t* prg_rom_data, size_t prg_rom_size, uint8_t* chr_rom_data, size_t chr_rom_size, MirrorMode mirror_mode) {
+	if (alternative_nametable_layout) {
 		isFourScreen = true;
 		_nametableRamSize = 0x1000; // 4 screen
 	}
-	MapperBase::initialize(data);
+	MapperBase::initialize(prg_rom_data, prg_rom_size, chr_rom_data, chr_rom_size, mirror_mode);
 	MapperBase::SetPrgPageSize(0x2000);
 	MapperBase::SetChrPageSize(0x400);
-	if (data.header.flags6 & FLAG_6_NAMETABLE_LAYOUT) {
+	if (alternative_nametable_layout) {
 		MapperBase::SetMirrorMode(MapperBase::MirrorMode::FOUR_SCREEN);
 	}
 }

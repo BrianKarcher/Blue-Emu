@@ -33,12 +33,10 @@ public:
 	};
 	uint8_t* _prgPages[0x100];
 	uint16_t _prgPageSize = 0;
-	uint16_t _prgRomSize = 0;
 	uint8_t _prgPageCount = 0;
 	uint8_t* _ppuPages[0x100];
 	bool _isPpuPageWritable[0x100];
 	uint16_t _chrPageSize = 0;
-	uint16_t _chrRomSize = 0;
 	uint8_t _chrPageCount = 0;
 	const uint16_t _nametablePageSize = 0x400;
 
@@ -67,7 +65,8 @@ public:
 	virtual void RecomputePrgMappings() = 0;
 	virtual void RecomputeChrMappings() = 0;
 	virtual void RecomputeMirrorModeMapping();
-	virtual void initialize(ines_file_t& data);
+	virtual void initialize(uint8_t* prg_rom_data, size_t prg_rom_size, uint8_t* chr_rom_data, size_t chr_rom_size, MirrorMode mirror_mode);
+	void initialize_vram();
 	void SetPrgPageSize(uint16_t pageSize);
 	void SetPrgPage(uint16_t pageIndex, uint8_t bank);
 	void SetPrgRange(uint16_t startInclusive, uint16_t endExclusive, uint32_t bankOffset);

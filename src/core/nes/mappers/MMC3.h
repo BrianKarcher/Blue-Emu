@@ -20,10 +20,10 @@ class RendererLoopy;
 class MMC3 : public MapperBase, public A12Mapper
 {
 public:
-	MMC3(NesBus& bus, uint8_t prgRomSize, uint8_t chrRomSize);
+	MMC3(NesBus& bus, uint8_t prgRomSize, uint8_t chrRomSize, bool alternative_nametable_layout);
 	~MMC3();
 
-	void initialize(ines_file_t& data) override;
+	void initialize(uint8_t* prg_rom_data, size_t prg_rom_size, uint8_t* chr_rom_data, size_t chr_rom_size, MirrorMode mirror_mode) override;
 	void shutdown();
 
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
@@ -64,4 +64,5 @@ private:
 	// A12 tracking
 	bool last_a12;
 	long a12LowCycle = 0;  // CPU cycle at the start of the last low time sequence
+	bool alternative_nametable_layout = false;
 };

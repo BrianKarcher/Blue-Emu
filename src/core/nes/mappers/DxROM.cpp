@@ -2,14 +2,14 @@
 #include "MapperBase.h"
 #include "Serializer.h"
 
-void DxROM::initialize(ines_file_t& data) {
-	if (data.header.flags6 & FLAG_6_NAMETABLE_LAYOUT) {
+void DxROM::initialize(uint8_t* prg_rom_data, size_t prg_rom_size, uint8_t* chr_rom_data, size_t chr_rom_size, MirrorMode mirror_mode) {
+	if (alternative_nametable_layout) {
 		_nametableRamSize = 0x1000; // 4 screen
 	}
-	MapperBase::initialize(data);
+	MapperBase::initialize(prg_rom_data, prg_rom_size, chr_rom_data, chr_rom_size, mirror_mode);
 	MapperBase::SetPrgPageSize(0x2000);
 	MapperBase::SetChrPageSize(0x400);
-	if (data.header.flags6 & FLAG_6_NAMETABLE_LAYOUT) {
+	if (alternative_nametable_layout) {
 		MapperBase::SetMirrorMode(MapperBase::MirrorMode::FOUR_SCREEN);
 	}
 }
