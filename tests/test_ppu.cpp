@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <Nes.h>
+#include "MapperBase.h"
 #include "NesBus.h"
 #include "NesCpu.h"
 #include "NesCartridge.h"
@@ -16,21 +17,21 @@ namespace test_ppu
             nes = new Nes(ctx);
             cart = nes->cart_;
             cart->mapper = new NROM(cart);
-            ines_file_t ines_loader;
-            //cart->mapper->initialize(ines_loader);
+            uint8_t rom[0x8000];
+            uint8_t chr[0x2000];
+            cart->mapper->initialize(rom, sizeof(rom), chr, sizeof(chr), MapperBase::MirrorMode::HORIZONTAL);
             bus = nes->bus_;
             cart->mapper->register_memory(*bus);
             cart->mapper->m_prgRamData.resize(0x2000);
             cpu = nes->cpu_;
             cpu->init_cpu();
-            uint8_t rom[0x8000];
-            cart->mapper->SetPRGRom(rom, sizeof(rom));
-            uint8_t chr[0x2000];
-            cart->mapper->SetCHRRom(chr, sizeof(chr));
             cart->mapper->RecomputeMappings();
             cpu->PowerCycle();
             cpu->SetPC(0x8000);
 			ppu = nes->ppu_;
+            uint32_t buffer[256 * 240];
+			ppu->setBuffer(buffer);
+			ppu->write_register(0x2001, 0b00011110); // Clear control register to ensure vertical increment
         }
         void TearDown() override {}
         void RunInst() {
@@ -59,22 +60,15 @@ namespace test_ppu
 
 		auto secondary_oam = ppu->renderer->get_secondary_oam();
 		// New sprites 0-3 should be cleared to 0xFF (indicating no sprite)
-		for (int i = 0; i < 4; ++i)
+		// 4 sprites, 4 bytes per sprite
+        for (int i = 0; i < 4 * 4; ++i)
         {
-            EXPECT_EQ(0xFF, secondary_oam[i].x);
-			EXPECT_EQ(0xFF, secondary_oam[i].y);
-			EXPECT_EQ(0xFF, secondary_oam[i].tileIndex);
-			EXPECT_EQ(0xFF, secondary_oam[i].attributes);
-            EXPECT_FALSE(secondary_oam[i].isSprite0);
+            EXPECT_EQ(0xFF, secondary_oam[i]);
         }
 		// Remaining sprites should still be cleared to 0x00
-        for (int i = 5; i < 8; ++i)
+        for (int i = 5 * 4; i < 8 * 4; ++i)
         {
-            EXPECT_EQ(0x00, secondary_oam[i].x);
-            EXPECT_EQ(0x00, secondary_oam[i].y);
-            EXPECT_EQ(0x00, secondary_oam[i].tileIndex);
-            EXPECT_EQ(0x00, secondary_oam[i].attributes);
-            EXPECT_FALSE(secondary_oam[i].isSprite0);
+            EXPECT_EQ(0x00, secondary_oam[i]);
         }
         
         EXPECT_EQ(1, 1);

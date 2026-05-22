@@ -75,7 +75,7 @@ struct RendererState {
 	uint64_t _frameCount; // We may not need this, it's to do odd/even frame handling
 	uint8_t ppumask = 0;
 	int dot = 0;
-	SpriteState secondaryOAM[8];
+	uint8_t secondaryOAM[0x20];
 	uint8_t spritePatternTableLow[8];
 	uint8_t spritePatternTableHigh[8];
 	uint16_t spritePatternAddrLow[8];

@@ -15,15 +15,6 @@ class Serializer;
 class RendererLoopy
 {
 public:
-    // Sprite data for current scanline
-    typedef struct Sprite {
-        uint8_t x;
-        uint8_t y;
-        uint8_t tileIndex;
-        uint8_t attributes;
-        bool isSprite0;
-    } Sprite;
-
     int m_scanline = 0; // Current NesPpu scanline (0-261)
     int dot = 0;
 
@@ -104,12 +95,11 @@ public:
 
     void fill_secondary_oam(uint8_t value)
     {
-		Sprite emptySprite = { value, value, value, value, false }; // 0xFF indicates no sprite
-        secondaryOAM.fill(emptySprite);
+		memset(secondaryOAM, value, sizeof(secondaryOAM));
     }
 
-    std::array<Sprite, 8> get_secondary_oam() const {
-        return secondaryOAM;
+    uint8_t* get_secondary_oam() {
+        return &secondaryOAM[0];
 	}
 
 private:
@@ -136,7 +126,14 @@ private:
     void prepareSpriteLine(int y);
     
     uint8_t ppumask = 0;
-    std::array<Sprite, 8> secondaryOAM{};
+	// Sprite data for a single scanline (up to 8 sprites, 4 bytes each)
+    // This is unstructured because we need to mimic how the NES handles the memory.
+	// It is possible for games to set the OAM Address to a non-multiple of 4 and write sprite data that way, so we need to be able to handle that.
+	// A non multiple of four will scramble the sprite data (tile id can end up in Y, for example - the sprites will look like nonsense),
+    // but that's how the hardware works, so we need to emulate it accurately.
+    uint8_t secondaryOAM[0x20];
+	//uint8_t secondaryOAMIndex = 0; // Points to the next free slot in secondary OAM during sprite evaluation. Each slot is 4 bytes (Y, tile, attributes, X)
+    uint8_t secondaryOAMSprite0Index;
 
     // Tile info
     TileFetch tile;
@@ -147,7 +144,7 @@ private:
     uint16_t spritePatternAddrLow[8];
     uint16_t spritePatternAddrHigh[8];
 
-    void evaluateSprites(int screenY, std::array<Sprite, 8>& newOam);
+    void evaluateSprites(int screenY, uint8_t *newOam);
     uint8_t get_pixel();
     inline void ApplyColorEmphasis(uint32_t& finalColor);
     void renderPixel(uint32_t* buffer);

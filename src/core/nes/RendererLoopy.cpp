@@ -372,6 +372,10 @@ void RendererLoopy::clock(uint32_t* buffer) {
     if (rendering) {
         // Visible Pixel area
         if (dot <= 256) {
+            // secondary OAM clear
+            if (dot <= 64) {
+                secondaryOAM[(dot - 1) / 2] = 0xFF; // Clear sprite slot
+			}
             if (visibleScanline) renderPixel(buffer);
             shift_registers();
 
@@ -443,12 +447,10 @@ void RendererLoopy::clock(uint32_t* buffer) {
     }
 }
 
-void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) {
-    for (int i = 0; i < 8; ++i) {
-        newOam[i] = { 0xFF, 0xFF, 0xFF, 0xFF }; // Initialize to empty sprite
-    }
+void RendererLoopy::evaluateSprites(int screenY, uint8_t *newOam) {
     // Evaluate sprites for this scanline
     int spriteCount = 0;
+    secondaryOAMSprite0Index = -1;
     for (int i = 0; i < 64; ++i) {
         int spriteY = m_ppu->oam[i * 4]; // Y position of the sprite
         if (spriteY > 0xF0) {
@@ -458,11 +460,12 @@ void RendererLoopy::evaluateSprites(int screenY, std::array<Sprite, 8>& newOam) 
         if (screenY >= spriteY && screenY < (spriteY + spriteHeight)) {
             if (spriteCount < 8) {
                 // Copy sprite data to new OAM
-                newOam[spriteCount].y = m_ppu->oam[i * 4];
-                newOam[spriteCount].tileIndex = m_ppu->oam[i * 4 + 1];
-                newOam[spriteCount].attributes = m_ppu->oam[i * 4 + 2];
-                newOam[spriteCount].x = m_ppu->oam[i * 4 + 3];
-                newOam[spriteCount].isSprite0 = (i == 0); // Mark if this is sprite 0
+				// Y, Tile Index, Attributes, X
+                newOam[spriteCount * 4] = m_ppu->oam[i * 4];
+                newOam[spriteCount * 4 + 1] = m_ppu->oam[i * 4 + 1];
+                newOam[spriteCount * 4 + 2] = m_ppu->oam[i * 4 + 2];
+                newOam[spriteCount * 4 + 3] = m_ppu->oam[i * 4 + 3];
+				if (i == 0) secondaryOAMSprite0Index = spriteCount; // Track sprite 0 index in secondary OAM
                 spriteCount++;
             }
             else {
@@ -487,9 +490,9 @@ void RendererLoopy::prepareSpriteLine(int y) {
     int slot = (dot - 257) / 8;
     int step = (dot - 257) % 8;
 
-    const Sprite& s = secondaryOAM[slot];
+    uint8_t *s = &secondaryOAM[slot * 4];
 
-    if (s.y <= 0xF0) {
+    if (s[0] <= 0xF0) {
         int i = 0;
     }
 
@@ -499,14 +502,14 @@ void RendererLoopy::prepareSpriteLine(int y) {
     case 2: // Garbage AT Read
     case 3: // Garbage AT Read
         // Hardware performs dummy reads here, usually to NT/AT 
-        m_ppu->ReadVRAM(0x2000 | s.tileIndex);
+        m_ppu->ReadVRAM(0x2000 | s[1]);
         break;
 
     case 4: { // Fetch Pattern Low Byte
-        uint8_t tileId = s.tileIndex;
+        uint8_t tileId = s[1];
         uint16_t addrLow;
-        int row = (y - s.y);
-        bool flipV = s.attributes & 0x80;
+        int row = (y - s[0]);
+        bool flipV = s[2] & 0x80;
         if (flipV) {
             row = (spriteHeight - 1) - row;
         }
@@ -515,7 +518,7 @@ void RendererLoopy::prepareSpriteLine(int y) {
             uint16_t bank = (tileId & 1) * 0x1000;
             tileId &= 0xFE;
 
-            if (s.y >= 0xF0) row = 0; // Force valid row for dummy reads
+            if (s[0] >= 0xF0) row = 0; // Force valid row for dummy reads
 
             if (row >= 8) { // Bottom half of large sprite
                 row -= 8;
@@ -528,7 +531,7 @@ void RendererLoopy::prepareSpriteLine(int y) {
             // 8x8: NesPpuCTRL Bit 3 determines pattern table
             uint16_t bank = (m_ppu->m_ppuCtrl & 0x08) ? 0x1000 : 0x0000;
 
-            if (s.y >= 0xF0) row = 0;
+            if (s[0] >= 0xF0) row = 0;
 
             spritePatternAddrLow[slot] = bank + (tileId * 16) + row;
         }
@@ -547,22 +550,22 @@ void RendererLoopy::prepareSpriteLine(int y) {
 
     case 7: { // Read Pattern High Byte (Cycle 2)
         // Ensure we read the RAM first due to IRQ timing issues, cycle accuracy (needs work!), etc.
-        if (s.y >= 0xF0) return;
+        if (s[0] >= 0xF0) return;
 
-        int spriteY = s.y;
+        int spriteY = s[0];
         int relY = y - spriteY;
         //if (relY < 0 || relY >= (spriteHeight)) continue;
 
-        bool flipV = s.attributes & 0x80;
-        bool flipH = s.attributes & 0x40;
-        uint8_t palette = s.attributes & 0x03;
-        bool behind = s.attributes & 0x20;
+        bool flipV = s[2] & 0x80;
+        bool flipH = s[2] & 0x40;
+        uint8_t palette = s[2] & 0x03;
+        bool behind = s[2] & 0x20;
 
         if (flipV) relY = (spriteHeight - 1) - relY;
 
         // We cache the next line of sprite pixels into a line buffer for quick access during pixel rendering
         for (int x = 0; x < 8; ++x) {
-            int screenX = s.x + x;
+            int screenX = s[3] + x;
             if (screenX >= 256) break;
 
             int bit = flipH ? x : (7 - x);
@@ -576,7 +579,7 @@ void RendererLoopy::prepareSpriteLine(int y) {
                         color,
                         palette,
                         behind,
-                        s.isSprite0 && color != 0,
+                        slot == secondaryOAMSprite0Index && color != 0,
                         true
                     };
                 }
@@ -610,12 +613,8 @@ void RendererLoopy::Serialize(Serializer& serializer) {
 	state._frameCount = _frameCount;
 	state.ppumask = ppumask;
     state.dot = dot;
+    memcpy(state.secondaryOAM, secondaryOAM, 0x20);
     for (int i = 0; i < 8; ++i) {
-        state.secondaryOAM[i].x = secondaryOAM[i].x;
-        state.secondaryOAM[i].y = secondaryOAM[i].y;
-        state.secondaryOAM[i].tileIndex = secondaryOAM[i].tileIndex;
-        state.secondaryOAM[i].attributes = secondaryOAM[i].attributes;
-        state.secondaryOAM[i].isSprite0 = secondaryOAM[i].isSprite0;
 		state.spritePatternAddrHigh[i] = spritePatternAddrHigh[i];
 		state.spritePatternAddrLow[i] = spritePatternAddrLow[i];
 		state.spritePatternTableHigh[i] = spritePatternTableHigh[i];
@@ -649,12 +648,8 @@ void RendererLoopy::Deserialize(Serializer& serializer) {
 	_frameCount = state._frameCount;
 	ppumask = state.ppumask;
 	dot = state.dot;
+    memcpy(secondaryOAM, state.secondaryOAM, 0x20);
     for (int i = 0; i < 8; ++i) {
-        secondaryOAM[i].x = state.secondaryOAM[i].x;
-        secondaryOAM[i].y = state.secondaryOAM[i].y;
-        secondaryOAM[i].tileIndex = state.secondaryOAM[i].tileIndex;
-        secondaryOAM[i].attributes = state.secondaryOAM[i].attributes;
-        secondaryOAM[i].isSprite0 = state.secondaryOAM[i].isSprite0;
 		spritePatternAddrHigh[i] = state.spritePatternAddrHigh[i];
 		spritePatternAddrLow[i] = state.spritePatternAddrLow[i];
 		spritePatternTableHigh[i] = state.spritePatternTableHigh[i];
