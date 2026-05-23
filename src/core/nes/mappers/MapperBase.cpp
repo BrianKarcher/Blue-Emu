@@ -29,8 +29,8 @@ void MapperBase::initialize(uint8_t *prg_rom_data, size_t prg_rom_size, uint8_t 
 	m_mirrorMode = mirror_mode;
 	//_prgRomSize = data.header.prg_rom_size * 16384;
 	//_chrRomSize = data.header.chr_rom_size * 8192;
-	RecomputeMappings();
 	initialize_vram();
+	RecomputeMappings();
 }
 
 // An alternate is to have the caller manage the memory and just pass in pointers

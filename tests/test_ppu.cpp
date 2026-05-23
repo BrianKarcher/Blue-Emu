@@ -31,7 +31,8 @@ namespace test_ppu
 			ppu = nes->ppu_;
             uint32_t buffer[256 * 240];
 			ppu->setBuffer(buffer);
-			ppu->write_register(0x2001, 0b00011110); // Clear control register to ensure vertical increment
+            // Enable rendering both bg and sprites.
+			ppu->write_register(0x2001, 0b00011110);
         }
         void TearDown() override {}
         void RunInst() {
@@ -70,8 +71,22 @@ namespace test_ppu
         {
             EXPECT_EQ(0x00, secondary_oam[i]);
         }
-        
-        EXPECT_EQ(1, 1);
+    }
+
+	// This test ensures that the secondary OAM is fully cleared to 0xFF after the first 64 dots of the scanline, even if it was previously filled with 0x00.
+    TEST_F(PPUEnv, AllSecondaryOAMClearTest)
+    {
+        ppu->renderer->fill_secondary_oam(0x00); // Clear secondary OAM with 0x00
+        for (int i = 0; i < 64; ++i)
+        {
+            ppu->Clock();
+        }
+
+        auto secondary_oam = ppu->renderer->get_secondary_oam();
+        for (int i = 0; i < 4 * 4; ++i)
+        {
+            EXPECT_EQ(0xFF, secondary_oam[i]);
+        }
     }
 
     int main(int argc, char** argv)
