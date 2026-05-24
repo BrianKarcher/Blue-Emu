@@ -13,17 +13,15 @@ namespace BlueNESTest
         void SetUp() override {
             nes = new Nes(ctx);
             cart = nes->cart_;
-            cart->mapper = new NROM(cart);
+			cart->mapper = new NROM(cart);
+			uint8_t rom[0x8000];
+			uint8_t chr[0x2000];
+			cart->mapper->initialize(rom, sizeof(rom), chr, sizeof(chr), MapperBase::MirrorMode::HORIZONTAL);
             bus = nes->bus_;
             cart->mapper->register_memory(*bus);
             cart->mapper->m_prgRamData.resize(0x2000);
             cpu = nes->cpu_;
             cpu->init_cpu();
-            uint8_t rom[0x8000];
-            cart->mapper->SetPRGRom(rom, sizeof(rom));
-            uint8_t chr[0x2000];
-            cart->mapper->SetCHRRom(chr, sizeof(chr));
-            cart->mapper->RecomputeMappings();
             cpu->PowerCycle();
             cpu->SetPC(0x8000);
         }
@@ -144,7 +142,7 @@ namespace BlueNESTest
 	TEST_F(MyEnv, TestBRKInsideNMINotBlocked)
 	{
 		uint8_t rom[0x8000];
-		rom[0x1000] = BRK_IMPLIED;
+		rom[0x9000 - 0x8000] = BRK_IMPLIED;
 		//rom[0x9000 - 0x8000] = NOP_IMPLIED; // IRQ handler does nothing
 		rom[0xFFFA - 0x8000] = 0x00; // NMI vector
 		rom[0xFFFB - 0x8000] = 0x90;
@@ -342,7 +340,7 @@ namespace BlueNESTest
 
 	TEST_F(MyEnv, TestADCAbsolute)
 	{
-		// I think the 6502 stores in little endian, need to double check
+		// The 6502 stores in little endian
 		uint8_t rom[] = { ADC_ABSOLUTE, 0x23, 0x3 };
 		cart->mapper->SetPRGRom(rom, sizeof(rom));
 		bus->write(0x323, 0x40);

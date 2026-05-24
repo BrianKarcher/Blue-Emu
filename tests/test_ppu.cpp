@@ -25,7 +25,6 @@ namespace test_ppu
             cart->mapper->m_prgRamData.resize(0x2000);
             cpu = nes->cpu_;
             cpu->init_cpu();
-            cart->mapper->RecomputeMappings();
             cpu->PowerCycle();
             cpu->SetPC(0x8000);
 			ppu = nes->ppu_;
@@ -86,6 +85,18 @@ namespace test_ppu
         for (int i = 0; i < 4 * 4; ++i)
         {
             EXPECT_EQ(0xFF, secondary_oam[i]);
+        }
+    }
+
+    TEST_F(PPUEnv, OAMDATAReadTest)
+    {
+        // OAMDATA - "Writes will increment OAMADDR after the write; reads do not."
+        ppu->oam[0] = 3;
+        ppu->oam[1] = 1;
+        ppu->oam[2] = 2;
+        for (int i = 0; i < 5; i++)
+        {
+            EXPECT_EQ(3, ppu->read_register(OAMDATA));
         }
     }
 
