@@ -51,12 +51,6 @@ void MapperBase::SetCHRRom(uint8_t* data, size_t size) {
 }
 
 void MapperBase::SetPRGRom(uint8_t* data, size_t size) {
-	// Pad PRG data to at least 32KB
-	// We need to make sure the vectors exist (IRQ vectors at $FFFA-$FFFF)
-	// Even if they're zeroes.
-	if (size < 0x8000) {
-		size = 0x8000;
-	}
 	if (!m_prgRomData)
 	{
 		m_prgRomData = (uint8_t*)malloc(size * sizeof(uint8_t));

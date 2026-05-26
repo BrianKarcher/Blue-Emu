@@ -99,6 +99,22 @@ namespace test_ppu
             EXPECT_EQ(3, ppu->read_register(OAMDATA));
         }
     }
+    
+    TEST_F(PPUEnv, OAMDATAWriteTest)
+    {
+        // OAMDATA - "Writes will increment OAMADDR after the write; reads do not."
+        ppu->oam[0] = 3;
+        ppu->oam[1] = 1;
+        ppu->oam[2] = 2;
+        ppu->write_register(OAMDATA, 0);
+        // oamaddr should be on index 1
+        EXPECT_EQ(1, ppu->read_register(OAMDATA));
+    }
+
+    TEST_F(PPUEnv, SpriteEvalTest)
+    {
+
+    }
 
     int main(int argc, char** argv)
     {
