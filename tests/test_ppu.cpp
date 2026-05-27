@@ -111,9 +111,31 @@ namespace test_ppu
         EXPECT_EQ(1, ppu->read_register(OAMDATA));
     }
 
-    TEST_F(PPUEnv, SpriteEvalTest)
+    TEST_F(PPUEnv, SingleSpriteEvalTest)
     {
-
+        // Fill OAM with a sprite that will be on the next scanline
+        std::array<uint8_t, 0x100> oam;
+		oam[0] = 0; // Y position (will be on scanline 21)
+		oam[1] = 3;  // Tile index
+		oam[2] = 6;  // Attributes
+		oam[3] = 50; // X position
+		memcpy(ppu->oam.data(), oam.data(), 0x100); // Write the sprite data to OAM
+        ppu->renderer->fill_secondary_oam(0x00); // Clear secondary OAM with 0x00
+		
+        for (int i = 0; i < 64; ++i)
+        {
+            ppu->Clock();
+        }
+		// It should take 8 cycles to evaluate the sprite at oam[0] and copy it to secondary OAM.
+        for (int i = 0; i < 8; ++i)
+        {
+            ppu->Clock();
+        }
+        auto sec_oam = ppu->renderer->get_secondary_oam();
+		EXPECT_EQ(oam[0], sec_oam[0]); // Y position
+		EXPECT_EQ(oam[1], sec_oam[1]); // Tile index
+		EXPECT_EQ(oam[2], sec_oam[2]); // Attributes
+		EXPECT_EQ(oam[3], sec_oam[3]); // X position
     }
 
     int main(int argc, char** argv)

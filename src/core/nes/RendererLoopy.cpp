@@ -372,11 +372,10 @@ void RendererLoopy::clock(uint32_t* buffer) {
     if (rendering) {
         // Visible Pixel area
         if (dot <= 256) {
-            // secondary OAM clear
-            if (dot <= 64) {
-                secondaryOAM[(dot - 1) / 2] = 0xFF; // Clear sprite slot
-			}
-            if (visibleScanline) renderPixel(buffer);
+            if (visibleScanline) {
+                process_sprite_evaluation();
+                renderPixel(buffer);
+            }
             shift_registers();
 
             // Combined dot checks.
@@ -405,7 +404,6 @@ void RendererLoopy::clock(uint32_t* buffer) {
         // Sprite Eval / Housekeeping area
         else if (dot == 257) {
             ppuCopyX();
-            evaluateSprites(m_scanline, secondaryOAM);
             spriteLineBuffer.fill({ 255, 0, 0, false, false, false });  // 255 = no sprite
             prepareSpriteLine(m_scanline);
         }
@@ -447,39 +445,246 @@ void RendererLoopy::clock(uint32_t* buffer) {
     }
 }
 
-void RendererLoopy::evaluateSprites(int screenY, uint8_t *newOam) {
-    // Evaluate sprites for this scanline
-    int spriteCount = 0;
-    secondaryOAMSprite0Index = -1;
-    for (int i = 0; i < 64; ++i) {
-        int spriteY = m_ppu->oam[i * 4]; // Y position of the sprite
-        if (spriteY > 0xF0) {
-            continue; // Empty sprite slot
+void RendererLoopy::process_sprite_evaluation() {
+    // secondary OAM clear
+    if (dot <= 64) {
+        secondaryOAM[(dot - 1) / 2] = 0xFF; // Clear sprite slot
+        return;
+    }
+    else if (dot == 65) {
+        spr_eval.phase = SpriteEval::RANGE_CHECK;
+        spr_eval.n = 0;
+        spr_eval.m = 0;
+        spr_eval.sec_oam_ptr = 0;
+        spr_eval.sprites_found = 0;
+        spr_eval.overflow_reads = 0;
+        spr_eval.sprite_zero_next = false;
+        // Note: oam_addr should already be 0 at this point (cleared
+        // at dot 257 of the previous scanline during rendering).
+        // A non-zero oam_addr shifts the base read address, causing
+        // the evaluation to start mid-OAM.  We model this below.
+    }
+
+    const bool odd_cycle = (dot & 1) != 0;
+	auto oam = m_ppu->oam;
+
+    // ==============================================================
+    //  IDLE — Step 4
+    // ==============================================================
+    // Evaluation is complete but the bus keeps toggling.
+    //   Odd  cycles: read primary OAM at the frozen (n, m) address.
+    //                Because n overflowed past 63, the address wraps:
+    //                (n & 63) * 4 + m, which resolves to m (since
+    //                n & 63 == 0).
+    //   Even cycles: read (not write) secondary OAM at the frozen
+    //                pointer.  The write-enable is suppressed.
+    if (spr_eval.phase == SpriteEval::IDLE) {
+        if (odd_cycle) {
+            // Hardware reads OAM at the stale address.  n has wrapped
+            // to 0 (6-bit counter overflow); m retains its last value.
+            uint8_t addr = (m_ppu->oamAddr + ((spr_eval.n & 0x3F) * 4)
+                + spr_eval.m) & 0xFF;
+            spr_eval.read_latch = oam[addr];
         }
-        int spriteHeight = (m_ppu->m_ppuCtrl & NesPpuCTRL_SPRITESIZE) == 0 ? 8 : 16;
-        if (screenY >= spriteY && screenY < (spriteY + spriteHeight)) {
-            if (spriteCount < 8) {
-                // Copy sprite data to new OAM
-				// Y, Tile Index, Attributes, X
-                newOam[spriteCount * 4] = m_ppu->oam[i * 4];
-                newOam[spriteCount * 4 + 1] = m_ppu->oam[i * 4 + 1];
-                newOam[spriteCount * 4 + 2] = m_ppu->oam[i * 4 + 2];
-                newOam[spriteCount * 4 + 3] = m_ppu->oam[i * 4 + 3];
-				if (i == 0) secondaryOAMSprite0Index = spriteCount; // Track sprite 0 index in secondary OAM
-                spriteCount++;
+        // Even: silent read of secondary_oam[sec_oam_ptr & 0x1F].
+        // No state change.
+        return;
+    }
+
+    // ==============================================================
+    //  ODD CYCLE — Read from primary OAM
+    // ==============================================================
+    if (odd_cycle) {
+        // The hardware address bus outputs (oam_addr + n*4 + m) & $FF.
+        // oam_addr is normally 0; non-zero values are a known source
+        // of "OAM corruption" glitches.
+        uint8_t addr = (m_ppu->oamAddr + spr_eval.n * 4 + spr_eval.m) & 0xFF;
+        spr_eval.read_latch = oam[addr];
+        return; // State machine only advances on even cycles.
+    }
+
+    // ==============================================================
+    //  EVEN CYCLE — Write / evaluate / advance state
+    // ==============================================================
+    const int sprite_height = (m_ppu->m_ppuCtrl & 0x20) ? 16 : 8;
+
+    switch (spr_eval.phase) {
+
+        // ==============================================================
+        //  Step 1: RANGE_CHECK — Is this sprite on the next scanline?
+        // ==============================================================
+    case SpriteEval::RANGE_CHECK: {
+        // The hardware unconditionally writes the latch to secondary
+        // OAM at the current write pointer, even before knowing
+        // whether the sprite is in range.  If it's out of range the
+        // pointer doesn't advance, so the byte will be overwritten
+        // by the next sprite's Y.  This write is suppressed once
+        // secondary OAM is full (sprites_found == 8), but by that
+        // point we've already transitioned to OVERFLOW_EVAL.
+        secondaryOAM[spr_eval.sec_oam_ptr] = spr_eval.read_latch;
+
+        const int diff = m_scanline - spr_eval.read_latch;
+        const bool in_range = (diff >= 0) && (diff < sprite_height);
+
+        if (in_range) {
+            // Mark sprite 0 presence for hit detection.
+            if (spr_eval.n == 0)
+                spr_eval.sprite_zero_next = true;
+
+            // Y byte is already written above; advance pointer.
+            spr_eval.sec_oam_ptr++;
+            spr_eval.m = 1;
+            spr_eval.phase = SpriteEval::COPY_BYTES;
+        }
+        else {
+            // Out of range.  Y write will be overwritten.
+            // Advance to next sprite; m stays 0.
+            spr_eval.n++;
+            if (spr_eval.n >= 64)
+                spr_eval.phase = SpriteEval::IDLE;
+            // else: remain in RANGE_CHECK for the next sprite.
+        }
+        break;
+    }
+
+    // ==============================================================
+    //  Step 2: COPY_BYTES — Copy bytes 1, 2, 3 into secondary OAM
+    // ==============================================================
+    case SpriteEval::COPY_BYTES: {
+        secondaryOAM[spr_eval.sec_oam_ptr] = spr_eval.read_latch;
+        spr_eval.sec_oam_ptr++;
+        spr_eval.m++;
+
+        if (spr_eval.m == 4) {
+            // All 4 bytes of this sprite are copied.
+            spr_eval.sprites_found++;
+            spr_eval.m = 0;
+            spr_eval.n++;
+
+            if (spr_eval.n >= 64) {
+                // Finished scanning all 64 sprites.
+                spr_eval.phase = SpriteEval::IDLE;
+            }
+            else if (spr_eval.sprites_found >= 8) {
+                // Secondary OAM is full.  Switch to overflow
+                // evaluation.  m is correctly 0 at this point;
+                // the bug only manifests on repeated misses in
+                // step 3b.
+                spr_eval.phase = SpriteEval::OVERFLOW_EVAL;
             }
             else {
-                // Sprite overflow - more than 8 sprites on this scanline
-                if (!hasOverflowBeenSet) {
-                    // Set sprite overflow flag only once per frame
-                    hasOverflowBeenSet = true;
-                    m_ppu->m_ppuStatus |= NesPpuSTATUS_SPRITE_OVERFLOW;
-                }
-                break;
+                // More room — check the next sprite.
+                spr_eval.phase = SpriteEval::RANGE_CHECK;
             }
         }
+        break;
+    }
+
+    // ==============================================================
+    //  Step 3: OVERFLOW_EVAL — Buggy scan for the 9th+ sprite
+    // ==============================================================
+    //
+    // Writes to secondary OAM are suppressed (the bus performs a
+    // read of secondary OAM instead).  The value read from primary
+    // OAM[n*4 + m] is compared against the scanline as though it
+    // were a Y coordinate, regardless of what byte m actually
+    // indexes.
+    //
+    // BUG:  When the comparison fails (not in range), the hardware
+    //       increments BOTH n and m.  It should only increment n
+    //       (and reset m to 0).  Because m drifts, subsequent
+    //       sprites have their tile-index, attribute, or X bytes
+    //       misinterpreted as Y coordinates.
+    //
+    case SpriteEval::OVERFLOW_EVAL: {
+        const int diff = m_scanline - spr_eval.read_latch;
+        const bool in_range = (diff >= 0) && (diff < sprite_height);
+
+        if (in_range) {
+            // ---- Step 3a: sprite overflow detected ----
+            // Set the overflow flag in $2002.
+            m_ppu->m_ppuStatus |= 0x20;
+
+            // Advance m (correctly) and read the remaining 3 bytes
+            // of this sprite before going idle.
+            spr_eval.m = (spr_eval.m + 1) & 3;
+            spr_eval.overflow_reads = 3;
+            spr_eval.phase = SpriteEval::OVERFLOW_COPY;
+        }
+        else {
+            // ---- Step 3b: not in range (BUGGY) ----
+            // Hardware increments n AND m without carry between
+            // them.  m wraps independently at 4.
+            spr_eval.n++;
+            spr_eval.m = (spr_eval.m + 1) & 3; // <<< THE BUG
+
+            if (spr_eval.n >= 64)
+                spr_eval.phase = SpriteEval::IDLE;
+            // else: stay in OVERFLOW_EVAL, re-check with skewed m.
+        }
+        break;
+    }
+
+    // ==============================================================
+    //  Step 3a (cont.): OVERFLOW_COPY — Finish reading the sprite
+    //                   that triggered the overflow flag
+    // ==============================================================
+    //
+    // After finding an in-range sprite during overflow evaluation,
+    // the hardware reads the remaining 3 bytes of that sprite entry
+    // (m increments correctly: 1 → 2 → 3 → 0).  No data is written
+    // anywhere.  After all 4 bytes have been touched, evaluation
+    // transitions to IDLE.
+    //
+    case SpriteEval::OVERFLOW_COPY: {
+        spr_eval.m = (spr_eval.m + 1) & 3;
+        spr_eval.overflow_reads--;
+
+        if (spr_eval.overflow_reads == 0) {
+            spr_eval.n++;
+            spr_eval.phase = SpriteEval::IDLE;
+        }
+        break;
+    }
+
+    default:
+        break;
     }
 }
+
+//void RendererLoopy::evaluateSprites(int screenY, uint8_t *newOam) {
+    //// Evaluate sprites for this scanline
+    //int spriteCount = 0;
+    //secondaryOAMSprite0Index = -1;
+    //for (int i = 0; i < 64; ++i) {
+    //    int spriteY = m_ppu->oam[i * 4]; // Y position of the sprite
+    //    if (spriteY > 0xF0) {
+    //        continue; // Empty sprite slot
+    //    }
+    //    int spriteHeight = (m_ppu->m_ppuCtrl & NesPpuCTRL_SPRITESIZE) == 0 ? 8 : 16;
+    //    if (screenY >= spriteY && screenY < (spriteY + spriteHeight)) {
+    //        if (spriteCount < 8) {
+    //            // Copy sprite data to new OAM
+				//// Y, Tile Index, Attributes, X
+    //            newOam[spriteCount * 4] = m_ppu->oam[i * 4];
+    //            newOam[spriteCount * 4 + 1] = m_ppu->oam[i * 4 + 1];
+    //            newOam[spriteCount * 4 + 2] = m_ppu->oam[i * 4 + 2];
+    //            newOam[spriteCount * 4 + 3] = m_ppu->oam[i * 4 + 3];
+				//if (i == 0) secondaryOAMSprite0Index = spriteCount; // Track sprite 0 index in secondary OAM
+    //            spriteCount++;
+    //        }
+    //        else {
+    //            // Sprite overflow - more than 8 sprites on this scanline
+    //            if (!hasOverflowBeenSet) {
+    //                // Set sprite overflow flag only once per frame
+    //                hasOverflowBeenSet = true;
+    //                m_ppu->m_ppuStatus |= NesPpuSTATUS_SPRITE_OVERFLOW;
+    //            }
+    //            break;
+    //        }
+    //    }
+    //}
+//}
 
 // Converting into a state machine
 void RendererLoopy::prepareSpriteLine(int y) {
