@@ -72,6 +72,7 @@ void MMC3::initialize(uint8_t* prg_rom_data, size_t prg_rom_size, uint8_t* chr_r
 }
 
 void MMC3::shutdown() {
+	MapperBase::shutdown();
 	renderLoopy->setMapper(nullptr);
 	this->bus.ppu.setMapper(nullptr);
 }

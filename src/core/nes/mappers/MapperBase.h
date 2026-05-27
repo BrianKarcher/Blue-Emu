@@ -90,7 +90,7 @@ public:
 	void SetMirrorMode(MirrorMode mirrorMode);
 
 	void writeCHR(uint16_t addr, uint8_t data);
-	void shutdown();
+	virtual void shutdown();
 
 	uint16_t _nametableRamSize = 0x800; // Default 2 KB nametable RAM size
 	std::vector<uint8_t> _vram; // 2 KB VRAM used to hold nametables. Some mappers may override this.

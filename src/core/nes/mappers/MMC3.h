@@ -24,7 +24,7 @@ public:
 	~MMC3();
 
 	void initialize(uint8_t* prg_rom_data, size_t prg_rom_size, uint8_t* chr_rom_data, size_t chr_rom_size, MirrorMode mirror_mode) override;
-	void shutdown();
+	void shutdown() override;
 
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	void ClockIRQCounter(uint16_t ppu_address);
