@@ -37,7 +37,6 @@ public:
 	BoardType boardType;
 	uint8_t prgBankReg = 0;
 	uint8_t suromPrgOuterBank;
-	void shutdown() { }
 	void Serialize(Serializer& serializer) override;
 	void Deserialize(Serializer& serializer) override;
 

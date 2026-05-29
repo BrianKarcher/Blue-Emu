@@ -41,6 +41,14 @@ namespace test_ppu
                 cpu->cpu_tick();
             }
         }
+        void fill_sprite(uint8_t y_pos, uint8_t tile_id, uint8_t attributes, uint8_t x_pos, std::array<uint8_t, 0x100>& oam, int sprite_index)
+        {
+            int base = sprite_index * 4;
+            oam[base] = y_pos; // Y position
+            oam[base + 1] = tile_id;  // Tile index
+            oam[base + 2] = attributes;  // Attributes
+            oam[base + 3] = x_pos; // X position
+        }
         SharedContext ctx;
         Nes* nes;
         NesBus* bus;
@@ -122,7 +130,7 @@ namespace test_ppu
 		memcpy(ppu->oam.data(), oam.data(), 0x100); // Write the sprite data to OAM
         ppu->renderer->fill_secondary_oam(0x00); // Clear secondary OAM with 0x00
 		
-        for (int i = 0; i < 64; ++i)
+        for (int i = 0; i < 65; ++i)
         {
             ppu->Clock();
         }
@@ -136,6 +144,38 @@ namespace test_ppu
 		EXPECT_EQ(oam[1], sec_oam[1]); // Tile index
 		EXPECT_EQ(oam[2], sec_oam[2]); // Attributes
 		EXPECT_EQ(oam[3], sec_oam[3]); // X position
+    }
+
+    // Testing worst case scenario where all eight sprites are at the end of OAM.
+    TEST_F(PPUEnv, EightSpritesAtEndEvalTest)
+    {
+        // Fill OAM with a sprites that will be on the next scanline
+        std::array<uint8_t, 0x100> oam;
+        oam.fill(0xFF);
+        for (int i = 0; i < 8; ++i)
+        {
+			int sprite_index = 56 + i; // Start at index 56 to fill the last 8 sprites (56-63)
+            fill_sprite(0, i, 6, 50, oam, sprite_index);
+        }
+		
+        memcpy(ppu->oam.data(), oam.data(), 0x100); // Write the sprite data to OAM
+        ppu->renderer->fill_secondary_oam(0x00); // Clear secondary OAM with 0x00
+
+        for (int i = 0; i < 65; ++i)
+        {
+            ppu->Clock();
+        }
+		// Cycles 65 - 256 are used to evaluate the sprites and copy them to secondary OAM. Since all sprites are valid,
+        // it should copy all 8 sprites without hitting the overflow evaluation phase.
+        for (int i = 0; i < 192; ++i)
+        {
+            ppu->Clock();
+        }
+        auto sec_oam = ppu->renderer->get_secondary_oam();
+        for (int i = 0; i < 8 * 4; ++i)
+        {
+            EXPECT_EQ(oam[i + 224], sec_oam[i]);
+        }
     }
 
     int main(int argc, char** argv)

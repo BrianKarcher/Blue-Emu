@@ -24,7 +24,6 @@ public:
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
 	void RecomputePrgMappings() override;
 	void RecomputeChrMappings() override;
-	void shutdown() {}
 	void Serialize(Serializer& serializer) override;
 	void Deserialize(Serializer& serializer) override;
 

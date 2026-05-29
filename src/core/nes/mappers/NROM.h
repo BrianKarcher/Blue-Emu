@@ -8,7 +8,6 @@ class NROM : public MapperBase {
 public:
 	NROM(NesCartridge* cartridge);
 	void writeRegister(uint16_t addr, uint8_t val, uint64_t currentCycle);
-	void shutdown() { }
 	void Serialize(Serializer& serializer) override {
 		MapperBase::Serialize(serializer);
 	}
