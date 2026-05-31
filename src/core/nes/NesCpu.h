@@ -201,6 +201,7 @@ public:
 
 	void SetNMIImmediate();
 	void setNMI(bool state);
+	bool IsNmiLineHigh() const { return nmi_line; }
 	void SetIRQImmediate();
 	void setIRQ(bool state);
 	// Power Cycle and Reset are different

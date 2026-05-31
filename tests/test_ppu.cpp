@@ -242,6 +242,102 @@ namespace test_ppu
             << "VBL must be set after " << (VBL_CPU_CYCLE + 1) << " CPU cycles";
     }
 
+    // -----------------------------------------------------------------------
+    // NMI timing tests
+    //
+    // NMI fires when VBL is set AND PPUCTRL bit 7 (NMI_ENABLE) is set.
+    // In the CPU-first loop (cpu_tick runs before ppu->Clock()):
+    //
+    //   Nes::clock() iteration VBL_CPU_CYCLE (= 27394, 0-indexed):
+    //     cpu_tick #27394  – NMI not yet available (PPU hasn't run yet)
+    //     ppu.Clock() #82182 – VBL set; setNMI(true) called
+    //                          nmi_line = true, nmi_need = true  (fixed timing)
+    //
+    //   Nes::clock() iteration VBL_CPU_CYCLE+1:
+    //     cpu_tick #27395  – nmi_previous_need = nmi_need = true (at END)
+    //
+    //   Nes::clock() iteration VBL_CPU_CYCLE+2:
+    //     cpu_tick #27396  – inst_complete=true (27396 is even with all-NOP ROM),
+    //                        nmi_previous_need=true → NMI handler begins (T0)
+    //
+    //   NMI handler T0–T6 spans cpu_ticks 27396–27402.
+    //   T6 loads PC = NMI vector ($C000 in the test setup).
+    //
+    //   cpu_tick #27403 fetches the first instruction (RTI, $40) at $C000,
+    //   advancing PC to $C001.
+    //
+    //   Total from frame start: VBL_CPU_CYCLE + 9 iterations complete, then
+    //   one more lands on cpu_tick #27403 → PC = $C001.
+    //   So run VBL_CPU_CYCLE + 10 iterations total.
+    // -----------------------------------------------------------------------
+
+    TEST_F(PPUEnv, NmiLineGoesHighAtVbl)
+    {
+        static uint32_t framebuf[256 * 240];
+        ppu->setBuffer(framebuf);
+        ppu->write_register(0x2000, 0x80);  // Enable NMI (PPUCTRL bit 7)
+
+        // VBL has not fired yet after VBL_CPU_CYCLE complete iterations.
+        for (int i = 0; i < VBL_CPU_CYCLE; ++i)
+            nes->clock();
+
+        EXPECT_FALSE(cpu->IsNmiLineHigh())
+            << "NMI line must be low before the VBL-setting iteration";
+
+        // One more iteration: ppu.Clock() #82182 fires VBL and asserts NMI.
+        nes->clock();
+
+        EXPECT_TRUE(cpu->IsNmiLineHigh())
+            << "NMI line must go high in the same iteration VBL is set";
+    }
+
+    TEST_F(PPUEnv, NmiNotFiredWithoutEnable)
+    {
+        static uint32_t framebuf[256 * 240];
+        ppu->setBuffer(framebuf);
+        // PPUCTRL left at 0 (NMI_ENABLE bit clear – the fixture default).
+
+        for (int i = 0; i <= VBL_CPU_CYCLE; ++i)
+            nes->clock();
+
+        // VBL flag in PPUSTATUS must be set regardless of NMI_ENABLE.
+        EXPECT_NE(ppu->GetNesPpuStatus() & NesPpuSTATUS_VBLANK, 0)
+            << "VBL flag should be set even when NMI is disabled";
+
+        // But the NMI line must remain low.
+        EXPECT_FALSE(cpu->IsNmiLineHigh())
+            << "NMI line must stay low when PPUCTRL NMI_ENABLE (bit 7) is clear";
+    }
+
+    TEST_F(PPUEnv, NmiHandlerReachesVectorWithinExpectedCycles)
+    {
+        // Fill $8000-$BFFF with NOPs so the CPU is always at a 2-cycle instruction
+        // boundary, making inst_complete parity deterministic.
+        memset(cart->mapper->m_prgRomData, 0xEA, 0x4000);
+
+        // NMI vector → $C000.  RTI ($40) at $C000 keeps the handler self-contained.
+        cart->mapper->m_prgRomData[0x4000] = 0x40;       // RTI at $C000
+        cart->mapper->m_prgRomData[0x7FFA] = 0x00;       // NMI vector low  ($FFFA)
+        cart->mapper->m_prgRomData[0x7FFB] = 0xC0;       // NMI vector high ($FFFB) → $C000
+
+        static uint32_t framebuf[256 * 240];
+        ppu->setBuffer(framebuf);
+        ppu->write_register(0x2000, 0x80);  // Enable NMI
+
+        // Run exactly VBL_CPU_CYCLE + 10 iterations:
+        //   +1  – VBL fires (ppu.Clock #82182 asserts NMI)
+        //   +1  – cpu_tick #27395 latches nmi_previous_need = true
+        //   +1  – cpu_tick #27396 takes NMI (T0); NMI handler begins
+        //   +6  – NMI handler T1–T6; T6 loads PC = $C000
+        //   +1  – cpu_tick #27403 fetches RTI at $C000; PC advances to $C001
+        for (int i = 0; i < VBL_CPU_CYCLE + 10; ++i)
+            nes->clock();
+
+        EXPECT_EQ(cpu->GetPC(), 0xC001)
+            << "CPU should be executing the NMI handler (RTI at $C000 just fetched, "
+               "PC = $C001) after exactly VBL_CPU_CYCLE + 10 iterations";
+    }
+
     int main(int argc, char** argv)
     {
         ::testing::InitGoogleTest(&argc, argv);
