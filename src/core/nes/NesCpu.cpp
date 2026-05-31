@@ -283,6 +283,14 @@ void NesCpu::SetNMIImmediate() {
 
 // Called by mappers/devices to set interrupt lines
 void NesCpu::setNMI(bool state) {
+	// On a rising edge, set nmi_need immediately so the NMI can be taken
+	// in the next cpu_tick(). Without this, the CPU-first loop ordering adds
+	// an extra cycle of delay: the PPU sets nmi_line after cpu_tick() has
+	// already run, so the edge detector in cpu_tick() can't fire until the
+	// cycle after that, making NMI arrive 2 cycles late instead of 1.
+	if (state && !nmi_line) {
+		nmi_need = true;
+	}
 	nmi_line = state;
 }
 

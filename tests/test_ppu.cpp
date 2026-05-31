@@ -178,6 +178,70 @@ namespace test_ppu
         }
     }
 
+    // VBL is set at dot 1 of scanline 241.
+    // From frame start (dot=0, scanline=0):
+    //   241 scanlines * 341 dots/scanline = 82181 PPU clocks for scanlines 0-240
+    //   + 1 dot for dot 1 of scanline 241
+    //   = PPU clock index 82182 (0-indexed) is where VBL is set.
+    //
+    // In terms of CPU cycles (3 PPU clocks per CPU cycle):
+    //   82182 / 3 = 27394 exactly, so this is the FIRST PPU clock of CPU cycle 27394.
+    //   Because Nes::clock() runs cpu_tick() before ppu->Clock(), the CPU cannot
+    //   observe VBL until cpu_tick() of CPU cycle 27395.
+    static constexpr int VBL_PPU_CLOCK = 241 * 341 + 1;  // 82182
+    static constexpr int VBL_CPU_CYCLE = VBL_PPU_CLOCK / 3;  // 27394 (0-indexed)
+
+    TEST_F(PPUEnv, VblFlagSetOnCorrectPpuClock)
+    {
+        // The SetUp buffer is stack-allocated in SetUp() and is dangling by the time
+        // any TEST_F body runs. Visible-scanline clocks write to the buffer, so
+        // provide a properly scoped one.
+        static uint32_t framebuf[256 * 240];
+        ppu->setBuffer(framebuf);
+
+        // Run up to (but not including) the VBL-setting clock.
+        for (int i = 0; i < VBL_PPU_CLOCK; ++i)
+            ppu->Clock();
+
+        EXPECT_EQ(ppu->GetNesPpuStatus() & NesPpuSTATUS_VBLANK, 0)
+            << "VBL flag must be clear before PPU clock " << VBL_PPU_CLOCK
+            << " (dot 0 of scanline 241 just processed)";
+
+        // This clock lands on dot 1 of scanline 241 — VBL must now be set.
+        ppu->Clock();
+
+        EXPECT_NE(ppu->GetNesPpuStatus() & NesPpuSTATUS_VBLANK, 0)
+            << "VBL flag must be set at PPU clock " << VBL_PPU_CLOCK
+            << " (dot 1 of scanline 241)";
+    }
+
+    TEST_F(PPUEnv, VblVisibleToCpuOnCorrectCycle)
+    {
+        // After VBL_CPU_CYCLE complete Nes::clock() iterations the PPU has processed
+        // exactly 3*27394 = 82182 clocks (indices 0..82181). The VBL-setting clock
+        // (index 82182) has NOT run yet, so the flag must still be clear.
+        //
+        // After one more iteration the PPU processes clocks 82182-82184; VBL is set
+        // during clock 82182, so the flag must be set after that iteration.
+        //
+        // The CPU cannot read VBL during the iteration it is set (cpu_tick runs
+        // before ppu->Clock() in Nes::clock()), so it first sees V=1 at CPU cycle
+        // VBL_CPU_CYCLE + 1 (= 27395, 0-indexed).
+        static uint32_t framebuf[256 * 240];
+        ppu->setBuffer(framebuf);
+
+        for (int i = 0; i < VBL_CPU_CYCLE; ++i)
+            nes->clock();
+
+        EXPECT_EQ(ppu->GetNesPpuStatus() & NesPpuSTATUS_VBLANK, 0)
+            << "VBL must not be set after " << VBL_CPU_CYCLE << " CPU cycles";
+
+        nes->clock();  // PPU clocks 82182-82184 run; VBL is set at 82182.
+
+        EXPECT_NE(ppu->GetNesPpuStatus() & NesPpuSTATUS_VBLANK, 0)
+            << "VBL must be set after " << (VBL_CPU_CYCLE + 1) << " CPU cycles";
+    }
+
     int main(int argc, char** argv)
     {
         ::testing::InitGoogleTest(&argc, argv);
