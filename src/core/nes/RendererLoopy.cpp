@@ -21,10 +21,39 @@ void RendererLoopy::initialize(NesPpu* ppu) {
 }
 
 void RendererLoopy::reset() {
+    // Loopy scroll/address registers
     *(uint16_t*)&loopy.v = 0;
     *(uint16_t*)&loopy.t = 0;
     loopy.x = 0;
     loopy.w = false;
+
+    // Dot/scanline position — PPU must start at the top of a new frame
+    dot = 0;
+    m_scanline = 0;
+    _frameCount = 0;
+
+    // Per-frame flags
+    ppumask = 0;
+    m_frameTick = false;
+    m_frameComplete = false;
+    hasOverflowBeenSet = false;
+    hasSprite0HitBeenSet = false;
+
+    // Background shift registers and tile fetch pipeline
+    m_shifts = {};
+    tile = {};
+
+    // Sprite evaluation state machine
+    spr_eval = {};
+    memset(secondaryOAM, 0xFF, sizeof(secondaryOAM));
+    spriteLineBuffer.fill({ 255, 0, 0, false, false, false });
+
+    // Sprite pattern fetch buffers
+    memset(spritePatternTableLow,  0, sizeof(spritePatternTableLow));
+    memset(spritePatternTableHigh, 0, sizeof(spritePatternTableHigh));
+    memset(spritePatternAddrLow,   0, sizeof(spritePatternAddrLow));
+    memset(spritePatternAddrHigh,  0, sizeof(spritePatternAddrHigh));
+
     memset(context.GetBackBuffer(), 0x00, WIDTH * HEIGHT * sizeof(uint32_t));
 }
 

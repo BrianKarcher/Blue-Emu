@@ -45,6 +45,8 @@ void NesPpu::reset()
 	m_ppuCtrl = 0;
 	m_ppuStatus = 0;
 	ppuDataBuffer = 0;
+	oamAddr = 0;
+	oam.fill(0xFF);
 	paletteTable.fill(0x00);
 	renderer->reset();
 }

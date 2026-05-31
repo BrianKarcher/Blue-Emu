@@ -162,18 +162,23 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
     switch (cmd.type) {
     case CommandQueue::CommandType::LOAD_ROM:
         audioBackend.resetBuffer();
-        nes.cart_->unload();
-        nes.ppu_->reset();
-        nes.apu_->reset();
-        nes.bus_->PowerCycle();
-        nes.cart_->LoadROM(cmd.data);
-        nes.cpu_->PowerCycle();
-        m_paused = false;
-        UpdateNextFrameTime();
-        // Set up DMC read callback
+        nes.cart_->unload();        // Save SRAM, destroy old mapper
+        nes.ppu_->reset();          // Clear registers, OAM, scroll state, dot/scanline
+        nes.apu_->reset();          // Silence channels, reset frame counter
+        nes.bus_->PowerCycle();     // Fill CPU RAM with 0xFF (hardware power-on state)
+        // Clear any in-flight DMA from the previous game before loading new ROM
+        nes.dmaActive = false;
+        nes.dmaPage   = 0;
+        nes.dmaAddr   = 0;
+        nes.dmaCycles = 0;
+        nes.cart_->LoadROM(cmd.data); // Parse ROM, create mapper, register with bus
+        nes.cpu_->PowerCycle();       // Read reset vector from newly loaded cart
+        // Re-bind DMC read callback so the new bus mapping is captured
         nes.apu_->set_dmc_read_callback([this](uint16_t address) -> uint8_t {
             return nes.bus_->read(address);
         });
+        m_paused = false;
+        UpdateNextFrameTime();
         context.coreRunning.store(true);
         break;
     case CommandQueue::CommandType::RESET:
