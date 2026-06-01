@@ -93,16 +93,21 @@ void EmulatorCore::run() {
 
 		dbgCtx->UpdateSnapshot(nes.bus_->ramMapper.cpuRAM.data(), nullptr);
 
-        long long targetTime = nextFrameUpdateTime;
         nextFrameUpdateTime += ticksPerFrame;
 
-        // Get current time (actual time frame execution finished)
-        LARGE_INTEGER currentFrame_li;
-        QueryPerformanceCounter(&currentFrame_li);
-        long long currentTime = currentFrame_li.QuadPart;
+        // Sleep for most of the remaining frame budget, then spin-wait for the
+        // last ~1 ms so we hit the target without Windows timer granularity error.
+        LARGE_INTEGER now_li;
+        QueryPerformanceCounter(&now_li);
+        long long remaining = nextFrameUpdateTime - now_li.QuadPart;
+        if (remaining > 0) {
+            long long sleepMs = remaining * 1000 / freq - 1;
+            if (sleepMs > 1) Sleep((DWORD)sleepMs);
+            do { QueryPerformanceCounter(&now_li); }
+            while (now_li.QuadPart < nextFrameUpdateTime);
+        }
 
-        if (currentTime >= nextFpsUpdateTime) {
-			// Update FPS once per second
+        if (now_li.QuadPart >= nextFpsUpdateTime) {
 			LOG(L"FPS: %d, cycles: %d\n", frameCount, audioCycleCounter);
             context.current_fps.store(frameCount);
             frameCount = 0;
@@ -162,18 +167,16 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
     switch (cmd.type) {
     case CommandQueue::CommandType::LOAD_ROM:
         audioBackend.resetBuffer();
-        nes.cart_->unload();        // Save SRAM, destroy old mapper
-        nes.ppu_->reset();          // Clear registers, OAM, scroll state, dot/scanline
-        nes.apu_->reset();          // Silence channels, reset frame counter
-        nes.bus_->PowerCycle();     // Fill CPU RAM with 0xFF (hardware power-on state)
-        // Clear any in-flight DMA from the previous game before loading new ROM
+        nes.cart_->unload();
+        nes.ppu_->reset();
+        nes.apu_->reset();
+        nes.bus_->PowerCycle();
         nes.dmaActive = false;
         nes.dmaPage   = 0;
         nes.dmaAddr   = 0;
         nes.dmaCycles = 0;
-        nes.cart_->LoadROM(cmd.data); // Parse ROM, create mapper, register with bus
-        nes.cpu_->PowerCycle();       // Read reset vector from newly loaded cart
-        // Re-bind DMC read callback so the new bus mapping is captured
+        nes.cart_->LoadROM(cmd.data);
+        nes.cpu_->PowerCycle();
         nes.apu_->set_dmc_read_callback([this](uint16_t address) -> uint8_t {
             return nes.bus_->read(address);
         });
@@ -186,6 +189,11 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
         nes.ppu_->reset();
         nes.apu_->reset();
         nes.bus_->reset();
+        nes.dmaActive = false;
+        nes.dmaPage = 0;
+        nes.dmaAddr = 0;
+        nes.dmaCycles = 0;
+        UpdateNextFrameTime();
         nes.cpu_->Reset();
         break;
     case CommandQueue::CommandType::POWER:
@@ -193,6 +201,11 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
         nes.ppu_->reset();
         nes.apu_->reset();
         nes.bus_->PowerCycle();
+        nes.dmaActive = false;
+        nes.dmaPage = 0;
+        nes.dmaAddr = 0;
+        nes.dmaCycles = 0;
+        UpdateNextFrameTime();
         nes.cpu_->PowerCycle();
         break;
     case CommandQueue::CommandType::CLOSE:
@@ -201,6 +214,11 @@ void EmulatorCore::processCommand(const CommandQueue::Command& cmd) {
         nes.ppu_->reset();
         nes.apu_->reset();
         nes.bus_->PowerCycle();
+        nes.dmaActive = false;
+        nes.dmaPage = 0;
+        nes.dmaAddr = 0;
+        nes.dmaCycles = 0;
+        UpdateNextFrameTime();
         m_paused = true;
         // Set up DMC read callback
         nes.apu_->set_dmc_read_callback([this](uint16_t address) -> uint8_t {
