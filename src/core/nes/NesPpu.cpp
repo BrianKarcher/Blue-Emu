@@ -103,11 +103,25 @@ inline void NesPpu::write_register(uint16_t addr, uint8_t value)
 	// addr is mirrored every 8 bytes up to 0x3FFF so we mask it
 	switch (addr) {
 	case NesPpuCTRL:
+	{
 		LOG(L"(%d) 0x%04X NesPpuCTRL Write 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
+		uint8_t old_ctrl = m_ppuCtrl;
 		m_ppuCtrl = value;
-		//OutputDebugStringW((L"NesPpuCTRL: " + std::to_wstring(value) + L"\n").c_str());
 		renderer->setNesPpuCTRL(value);
+
+		// NMI output = NMI_ENABLE AND VBL_FLAG.  A rising edge on either signal
+		// while the other is high must fire NMI immediately.
+		//
+		// When NMI_ENABLE is cleared, pull the NMI line low so the edge detector
+		// re-arms for the next 0->1 transition.
+		// When NMI_ENABLE goes 0->1 while VBL is active, fire NMI now.
+		if (!(value & NMI_ENABLE)) {
+			bus->cpu.setNMI(false);
+		} else if (!(old_ctrl & NMI_ENABLE) && (m_ppuStatus & NesPpuSTATUS_VBLANK)) {
+			bus->cpu.setNMI(true);
+		}
 		break;
+	}
 	case NesPpuMASK: // NesPpuMASK
 		LOG(L"(%d) 0x%04X NesPpuMASK Write 0x%02X\n", bus->cpu.GetCycleCount(), bus->cpu.GetPC(), value);
 		m_ppuMask = value;
