@@ -63,6 +63,6 @@ private:
 
 	// A12 tracking
 	bool last_a12;
-	long a12LowCycle = 0;  // CPU cycle at the start of the last low time sequence
+	uint64_t a12LowCycle = 0;  // CPU cycle when A12 last went low (falling edge)
 	bool alternative_nametable_layout = false;
 };

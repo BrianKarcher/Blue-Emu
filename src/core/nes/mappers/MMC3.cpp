@@ -207,34 +207,29 @@ void MMC3::ClockIRQCounter(uint16_t ppu_address) {
 	}
 	bool current_a12 = (ppu_address & 0x1000) != 0;
 
-	// Track low-time duration
 	if (current_a12) {
-		// Detect rising edge of A12 (0 -> 1 transition)
-		if (!last_a12 && current_a12 && (cpu.GetCycleCount() - a12LowCycle >= A12_LOW_THRESHOLD)) {
-		//if (!last_a12 && current_a12) {
-			//LOG(L"Scanline (%d) detected, dec %d \n", bus->ppu->renderer->m_scanline, irq_counter);
-			//if (a12_filter == 0) {
-				// Clock the counter on rising edge
+		// Rising edge: clock the IRQ counter only if A12 was low long enough.
+		// a12LowCycle records the CPU cycle of the falling edge, so the
+		// difference is the true low-period duration.
+		if (!last_a12 && (cpu.GetCycleCount() - a12LowCycle >= A12_LOW_THRESHOLD)) {
 			if (irq_counter == 0 || irq_reload) {
 				irq_counter = irq_latch;
 				irq_reload = false;
 			}
 			else {
-				//LOG(L"IRQ counter decrement %d\n", irq_counter);
 				irq_counter--;
 			}
 
-			// Trigger IRQ when counter reaches 0
 			if (irq_counter == 0 && irq_enabled) {
-				//LOG(L"IRQ Triggered at Scanline: %d, Dot: %d\n", bus.ppu.renderer->m_scanline, bus.ppu.renderer->dot);
 				triggerIRQ();
 			}
 
 			LOG(L"A12 Edge Detected: Scanline: %d, Dot: %d, IRQ Counter: %d\n", bus.ppu.renderer->m_scanline, bus.ppu.renderer->dot, irq_counter);
-
-			//a12_filter = 6;  // Typical filter delay
-		//}
 		}
+	}
+	else if (last_a12) {
+		// Falling edge: record when A12 went low so we can measure the
+		// low-period duration on the next rising edge.
 		a12LowCycle = cpu.GetCycleCount();
 	}
 
