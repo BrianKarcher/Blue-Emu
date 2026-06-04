@@ -813,7 +813,10 @@ void RendererLoopy::prepareSpriteLine(int y) {
                         color,
                         palette,
                         behind,
-                        slot == secondaryOAMSprite0Index && color != 0,
+                        // Sprite 0 is always in slot 0 of secondary OAM (evaluation
+                        // starts from n=0). sprite_zero_next is set by the evaluation
+                        // state machine and reset at dot 65 of each scanline.
+                        slot == 0 && spr_eval.sprite_zero_next,
                         true
                     };
                 }
