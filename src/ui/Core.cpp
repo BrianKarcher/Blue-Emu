@@ -240,10 +240,10 @@ bool Core::PollSDLEvents() {
                 switch (event.key.keysym.sym) {
                     case SDLK_ESCAPE: {
                         CommandQueue::Command cmd;
-                        bool newPauseState = !isPaused;
+                        bool newPauseState = !_dbgCtx->is_paused.load(std::memory_order_relaxed);
                         cmd.type = newPauseState ? CommandQueue::CommandType::PAUSE : CommandQueue::CommandType::RESUME;
                         context.command_queue.Push(cmd);
-                        isPaused = newPauseState;
+                        _dbgCtx->is_paused.store(newPauseState);
                     } break;
                     case SDLK_F11: {
                         bool isFullScreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN;
@@ -320,7 +320,7 @@ void Core::RunMessageLoop()
 
         bool got_new_frame = false;
 
-        if (isPlaying && !isPaused) {
+        if (isPlaying) {
             // Wait for the Core (The "Sleep" phase)
             // We wait up to 20ms. If the Core finishes in 5ms, we wake up in 5ms.
             // If the Core hangs, we wake up in 20ms anyway to handle SDL events again.
@@ -426,7 +426,7 @@ void Core::RunMessageLoop()
                     std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
                     lastOpenedPath = filePath;
                     LoadGame(filePathName);
-                    isPaused = false;
+                    _dbgCtx->is_paused.store(false);
                     updateMenu();
                 }
 
@@ -500,7 +500,7 @@ void Core::RunMessageLoop()
         // Only swap buffers when:
         // 1. A game is running AND we got a new frame from emulator (sync to 60 FPS)
         // 2. No game is running (swap at UI frame rate for responsiveness)
-        if (!isPlaying || isPaused || got_new_frame) {
+        if (!isPlaying || _dbgCtx->is_paused.load(std::memory_order_relaxed) || got_new_frame) {
             SDL_GL_SwapWindow(window);
         }
     }

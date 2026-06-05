@@ -107,7 +107,6 @@ private:
 
 	void PollControllerState();
 	bool PollSDLEvents();
-	bool isPaused;
 	std::string lastOpenedPath = ".";
 
 	// Resize the render target.

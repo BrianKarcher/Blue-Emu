@@ -132,8 +132,6 @@ private:
 	// A non multiple of four will scramble the sprite data (tile id can end up in Y, for example - the sprites will look like nonsense),
     // but that's how the hardware works, so we need to emulate it accurately.
     uint8_t secondaryOAM[0x20];
-	//uint8_t secondaryOAMIndex = 0; // Points to the next free slot in secondary OAM during sprite evaluation. Each slot is 4 bytes (Y, tile, attributes, X)
-    uint8_t secondaryOAMSprite0Index;
 
     struct SpriteEval {
         // Phase models the four steps of the hardware state machine.
