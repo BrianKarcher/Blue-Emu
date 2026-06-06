@@ -42,64 +42,80 @@ void DebuggerUI::ComputeDisplayMap() {
 
 std::string DebuggerUI::Disassemble(uint16_t address) {
     uint8_t opcode = _bus->peek(address);
-	std::stringstream ss;
-	ss << _opcodeNames[opcode];
-    switch (instMode[opcode]) {
+    const OpcodeInfo& info = kOpcodes[opcode];
+    std::stringstream ss;
+    ss << info.name;
+    switch (info.mode) {
     case IMM: {
         uint8_t value = _bus->peek(address + 1);
         ss << " #$" << std::uppercase << std::hex << (int)value;
     } break;
     case ZP: {
         uint8_t addr = _bus->peek(address + 1);
-		ss << " $" << std::uppercase << std::hex << (int)addr;
-	} break;
+        ss << " $" << std::uppercase << std::hex << (int)addr;
+    } break;
     case ZPX: {
         uint8_t addr = _bus->peek(address + 1);
-		ss << " $" << std::uppercase << std::hex << (int)addr << ",X ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.x << ")";
-	} break;
+        ss << " $" << std::uppercase << std::hex << (int)addr
+           << ",X ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.x << ")";
+    } break;
     case ZPY: {
-		uint8_t addr = _bus->peek(address + 1);
-		ss << " $" << std::uppercase << std::hex << (int)addr << ",Y ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.y << ")";
-	} break;
-	case ABS: {
-		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
-		uint8_t value = _bus->peek(addr);
-		ss << " $" << std::uppercase << std::hex << (int)addr << " = ($" << std::uppercase << std::hex << (int)value << ")";
-	} break;
-	case ABSX: {
-		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
-		uint8_t value = _bus->peek(addr + dbgCtx->lastState.x);
-		ss << " $" << std::uppercase << std::hex << (int)addr << ",X ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.x << ")" << " = ($" << std::uppercase << std::hex << (int)value << ")";
-	} break;
-	case ABSY: {
-		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
-		uint8_t value = _bus->peek(addr + dbgCtx->lastState.y);
-		ss << " $" << std::uppercase << std::hex << (int)addr << ",Y ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.y << ")" << " = ($" << std::uppercase << std::hex << (int)value << ")";
-	} break;
-	case IND: {
-		uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
-		uint16_t ptr = (_bus->peek((addr & 0xFF00) | ((addr + 1) & 0x00FF)) << 8);
-		ss << " ($" << std::uppercase << std::hex << (int)addr << ")" << " = ($" << std::uppercase << std::hex << (int)ptr << ")";
-	} break;
-	case INDX: {
-		uint8_t addr = _bus->peek(address + 1);
-		uint8_t ptr = (uint8_t)(addr + dbgCtx->lastState.x);
-		uint8_t ptrAddr = (_bus->peek((ptr & 0xFF00) | ((ptr + 1) & 0x00FF)) << 8);
-		ss << " ($" << std::uppercase << std::hex << (int)addr << ",X $" << std::uppercase << std::hex << (int)dbgCtx->lastState.x << ") $" << std::uppercase << std::hex << (int)ptr << " = (" << (int)ptrAddr << ")";
-	} break;
-	case INDY: {
-		uint8_t addr = _bus->peek(address + 1);
-		uint8_t ptrAddr = (_bus->peek((addr & 0xFF00) | ((addr + 1) & 0x00FF)) << 8);
-		ss << " ($" << std::uppercase << std::hex << (int)addr << "),Y( $" << std::uppercase << std::hex << (int)dbgCtx->lastState.y << ") = $" << std::uppercase << std::hex << (int)ptrAddr;
-	} break;
-	case REL: {
-		int8_t offset = (int8_t)_bus->peek(address + 1);
-		uint16_t target = address + 2 + offset;
-		ss << " $" << std::uppercase << std::hex << target;
-	} break;
+        uint8_t addr = _bus->peek(address + 1);
+        ss << " $" << std::uppercase << std::hex << (int)addr
+           << ",Y ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.y << ")";
+    } break;
+    case ABS: {
+        uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
+        uint8_t value = _bus->peek(addr);
+        ss << " $" << std::uppercase << std::hex << (int)addr
+           << " = ($" << std::uppercase << std::hex << (int)value << ")";
+    } break;
+    case ABSX: {
+        uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
+        uint8_t value = _bus->peek(addr + dbgCtx->lastState.x);
+        ss << " $" << std::uppercase << std::hex << (int)addr
+           << ",X ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.x << ")"
+           << " = ($" << std::uppercase << std::hex << (int)value << ")";
+    } break;
+    case ABSY: {
+        uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
+        uint8_t value = _bus->peek(addr + dbgCtx->lastState.y);
+        ss << " $" << std::uppercase << std::hex << (int)addr
+           << ",Y ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.y << ")"
+           << " = ($" << std::uppercase << std::hex << (int)value << ")";
+    } break;
+    case IND: {
+        uint16_t addr = _bus->peek(address + 1) | (_bus->peek(address + 2) << 8);
+        uint16_t ptr = (_bus->peek((addr & 0xFF00) | ((addr + 1) & 0x00FF)) << 8);
+        ss << " ($" << std::uppercase << std::hex << (int)addr
+           << ") = ($" << std::uppercase << std::hex << (int)ptr << ")";
+    } break;
+    case INDX: {
+        uint8_t addr  = _bus->peek(address + 1);
+        uint8_t ptr   = (uint8_t)(addr + dbgCtx->lastState.x);
+        uint8_t ptrAddr = (_bus->peek((ptr & 0xFF00) | ((ptr + 1) & 0x00FF)) << 8);
+        ss << " ($" << std::uppercase << std::hex << (int)addr
+           << ",X $" << std::uppercase << std::hex << (int)dbgCtx->lastState.x
+           << ") $" << std::uppercase << std::hex << (int)ptr
+           << " = (" << (int)ptrAddr << ")";
+    } break;
+    case INDY: {
+        uint8_t addr    = _bus->peek(address + 1);
+        uint8_t ptrAddr = (_bus->peek((addr & 0xFF00) | ((addr + 1) & 0x00FF)) << 8);
+        ss << " ($" << std::uppercase << std::hex << (int)addr
+           << "),Y ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.y
+           << ") = $" << std::uppercase << std::hex << (int)ptrAddr;
+    } break;
+    case REL: {
+        int8_t   offset = (int8_t)_bus->peek(address + 1);
+        uint16_t target = address + 2 + offset;
+        ss << " $" << std::uppercase << std::hex << target;
+    } break;
     case ACC:
         ss << " A ($" << std::uppercase << std::hex << (int)dbgCtx->lastState.a << ")";
-		break;
+        break;
+    case IMP:
+        break;
     }
     return ss.str();
 }

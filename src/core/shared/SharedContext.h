@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <array>
+#include <deque>
 #include "CommandQueue.h"
 
 #define WIDTH 256
@@ -27,7 +28,10 @@ private:
     std::atomic<int> front_index{ 1 };  // UI reads here
 
     std::mutex cv_mutex;
+    std::mutex log_mutex;
     std::condition_variable cv_frame_ready;
+    std::deque<std::string> prev_instr;
+
 public:
     struct CpuState {
         uint16_t pc;
@@ -43,6 +47,11 @@ public:
     std::atomic<uint16_t> current_fps{ 0 };
     std::atomic<uint8_t> mirrorMode;
     std::atomic<bool> coreRunning{ false };
+    // Enable CPU instruction tracing. Disabled by default: formatting every
+    // instruction at 1.79 MHz is expensive. The UI should toggle this on only
+    // when the trace viewer is open.
+    std::atomic<bool> instruction_log_enabled{ false };
+	
 
     SharedContext();
 
@@ -102,6 +111,19 @@ public:
         int front = front_index.load(std::memory_order_acquire);
         return buffers[front].data();
     }
+
+    void log_instruction(const std::string& instr) {
+        std::lock_guard<std::mutex> lock(log_mutex);
+        if (prev_instr.size() >= 50) {
+            prev_instr.pop_front();
+        }
+        prev_instr.push_back(instr);
+	}
+
+    void get_instruction_log(std::deque<std::string>& out) {
+        std::lock_guard<std::mutex> lock(log_mutex);
+        out = prev_instr;
+	}
 
 	CommandQueue command_queue;
 	DebuggerContext* debugger_context;

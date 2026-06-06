@@ -10,6 +10,60 @@
 
 #include <thread>
 #include <chrono>
+#include <cstdio>
+#include "NesDisassembler.h"
+
+namespace {
+
+// Format one trace line.
+// pc     = address of the opcode byte
+// opcode = the opcode byte (already fetched)
+// op1/2  = peeked operand bytes (no side effects)
+// Registers are the PRE-execution state.
+static std::string FormatTrace(uint16_t pc, uint8_t opcode, uint8_t op1, uint8_t op2,
+                                uint8_t a, uint8_t x, uint8_t y, uint8_t p, uint8_t sp,
+                                uint64_t cycle)
+{
+    const OpcodeInfo& info = kOpcodes[opcode];
+
+    // Raw bytes column (padded to 3 bytes wide)
+    char bytes[10];
+    if      (info.size == 1) std::snprintf(bytes, sizeof(bytes), "%02X      ", opcode);
+    else if (info.size == 2) std::snprintf(bytes, sizeof(bytes), "%02X %02X   ", opcode, op1);
+    else                     std::snprintf(bytes, sizeof(bytes), "%02X %02X %02X", opcode, op1, op2);
+
+    // Operand column
+    char operand[12] = {};
+    uint16_t abs_addr = static_cast<uint16_t>(op1) | (static_cast<uint16_t>(op2) << 8);
+    switch (info.mode) {
+    case IMP:  break;
+    case ACC:  std::snprintf(operand, sizeof(operand), "A"); break;
+    case IMM:  std::snprintf(operand, sizeof(operand), "#$%02X", op1); break;
+    case ZP:   std::snprintf(operand, sizeof(operand), "$%02X", op1); break;
+    case ZPX:  std::snprintf(operand, sizeof(operand), "$%02X,X", op1); break;
+    case ZPY:  std::snprintf(operand, sizeof(operand), "$%02X,Y", op1); break;
+    case ABS:  std::snprintf(operand, sizeof(operand), "$%04X", abs_addr); break;
+    case ABSX: std::snprintf(operand, sizeof(operand), "$%04X,X", abs_addr); break;
+    case ABSY: std::snprintf(operand, sizeof(operand), "$%04X,Y", abs_addr); break;
+    case IND:  std::snprintf(operand, sizeof(operand), "($%04X)", abs_addr); break;
+    case INDX: std::snprintf(operand, sizeof(operand), "($%02X,X)", op1); break;
+    case INDY: std::snprintf(operand, sizeof(operand), "($%02X),Y", op1); break;
+    case REL: {
+        uint16_t target = static_cast<uint16_t>(pc + 2 + static_cast<int8_t>(op1));
+        std::snprintf(operand, sizeof(operand), "$%04X", target);
+        break;
+    }
+    }
+
+    char buf[80];
+    std::snprintf(buf, sizeof(buf),
+        "%04X  %s  %-3s %-9s A:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%llu",
+        pc, bytes, info.name, operand, a, x, y, p, sp,
+        static_cast<unsigned long long>(cycle));
+    return buf;
+}
+
+} // namespace
 
 NesCpu::NesCpu(OpenNesBusMapper& openNesBus, SharedContext& ctx, DebuggerContext& dbg, NesPpu& ppu) : openNesBus(openNesBus), sharedCtx(ctx), dbgCtx(dbg), ppu(ppu) {
 	init_cpu();
@@ -96,6 +150,14 @@ void NesCpu::cpu_tick() {
 			dbgCtx.lastState.p = m_p;
 			dbgCtx.lastState.pc = m_pc; // Pointing to the opcode just executed/fetched
 			current_opcode = ReadByte(m_pc++);
+			if (sharedCtx.instruction_log_enabled.load(std::memory_order_relaxed)) {
+				uint16_t instr_pc = m_pc - 1;
+				uint8_t  op1 = bus->peek(m_pc);
+				uint8_t  op2 = bus->peek(m_pc + 1);
+				sharedCtx.log_instruction(FormatTrace(
+					instr_pc, current_opcode, op1, op2,
+					m_a, m_x, m_y, m_p, m_sp, m_cycle_count));
+			}
 		}
 		cycle_state = 1;
 		inst_complete = false;

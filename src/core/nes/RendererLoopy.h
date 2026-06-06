@@ -115,7 +115,7 @@ private:
 
     struct SpriteRenderData {
         uint8_t x;           // X position on screen
-        uint8_t colorIndex;  // 0–3 (0 = transparent)
+        uint8_t colorIndex;  // 0â€“3 (0 = transparent)
         uint8_t palette;     // Lower 2 bits of attributes
         bool    behindBg;    // Priority bit
         bool    isZero;      // Is this sprite 0?
@@ -137,12 +137,12 @@ private:
         // Phase models the four steps of the hardware state machine.
         //
         // STEP 1 (RANGE_CHECK):
-        //   Read OAM[n×4 + 0], compare against scanline. If in range,
+        //   Read OAM[nÃ—4 + 0], compare against scanline. If in range,
         //   transition to COPY_BYTES to copy the remaining 3 bytes.
         //   If not, increment n and repeat.
         //
         // STEP 2 (COPY_BYTES):
-        //   Copy bytes 1–3 (tile index, attributes, X) into secondary OAM.
+        //   Copy bytes 1â€“3 (tile index, attributes, X) into secondary OAM.
         //   After byte 3, increment sprites_found and n. If 8 found,
         //   transition to OVERFLOW_EVAL. If n = 64, go IDLE.
         //
@@ -166,10 +166,10 @@ private:
             IDLE
         } phase;
 
-        uint8_t n;                // Sprite index into primary OAM (0–63).
-        uint8_t m;                // Byte offset within sprite (0–3).
+        uint8_t n;                // Sprite index into primary OAM (0â€“63).
+        uint8_t m;                // Byte offset within sprite (0â€“3).
         uint8_t read_latch;       // Internal bus latch loaded on odd cycles.
-        uint8_t sec_oam_ptr;      // Write pointer into secondary OAM (0–31).
+        uint8_t sec_oam_ptr;      // Write pointer into secondary OAM (0â€“31).
         uint8_t sprites_found;    // Number of in-range sprites copied so far.
         uint8_t overflow_reads;   // Bytes remaining in OVERFLOW_COPY sub-state.
         bool    sprite_zero_next; // Sprite 0 is in the secondary OAM list.
