@@ -67,10 +67,14 @@ public:
     };
 
     bool HasBreakpoint(uint16_t addr);
-	void ToggleBreakpoint(uint16_t addr);
+    void ToggleBreakpoint(uint16_t addr);
+    void SetBreakpoint(uint16_t addr);
+    void ClearBreakpoint(uint16_t addr);
 
     std::mutex mutex;
-    std::atomic<uint8_t> breakpoints[65536];
+    // Atomic bitset: 1024 × 64-bit words covering all 65536 addresses.
+    // word = addr >> 6, bit = addr & 63.
+    std::atomic<uint64_t> breakpoints[1024];
     std::atomic<bool> is_paused{ false };
     std::atomic<bool> hit_breakpoint{ false };
     std::atomic<bool> continue_requested{ false };

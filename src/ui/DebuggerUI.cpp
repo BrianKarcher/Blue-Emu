@@ -1,5 +1,6 @@
 #include "DebuggerUI.h"
 #include <Windows.h>
+#include <intrin.h>
 #include <commctrl.h>
 #include "Core.h"
 #include <string>
@@ -217,7 +218,7 @@ void DebuggerUI::DrawScrollableDisassembler(bool* debuggerOpen) {
         if (confirm || ImGui::Button("OK")) {
             if (bpAddrBuf[0] != '\0') {
                 uint16_t addr = (uint16_t)std::strtol(bpAddrBuf, nullptr, 16);
-                dbgCtx->breakpoints[addr].store(true, std::memory_order_relaxed);
+                dbgCtx->SetBreakpoint(addr);
             }
             ImGui::CloseCurrentPopup();
         }
@@ -278,8 +279,7 @@ void DebuggerUI::DrawScrollableDisassembler(bool* debuggerOpen) {
                 // This targets the Selectable we just created
                 if (ImGui::BeginPopupContextItem()) {
                     if (ImGui::MenuItem("Add Breakpoint", nullptr, hasBreakpoint)) {
-                        if (hasBreakpoint) dbgCtx->breakpoints[addr].store(false);
-                        else dbgCtx->breakpoints[addr].store(true);
+                        dbgCtx->ToggleBreakpoint(addr);
                     }
                     if (ImGui::MenuItem("Copy Address")) {
                         ImGui::SetClipboardText(addrStr);
@@ -300,9 +300,14 @@ void DebuggerUI::DrawScrollableDisassembler(bool* debuggerOpen) {
     ImGui::Text("Breakpoints");
 
     std::vector<uint16_t> activeBreakpoints;
-    for (int i = 0; i < 0x10000; ++i) {
-        if (dbgCtx->breakpoints[i].load(std::memory_order_relaxed))
-            activeBreakpoints.push_back((uint16_t)i);
+    for (int word = 0; word < 1024; ++word) {
+        uint64_t bits = dbgCtx->breakpoints[word].load(std::memory_order_relaxed);
+        while (bits) {
+            unsigned long bit;
+            _BitScanForward64(&bit, bits);
+            activeBreakpoints.push_back((uint16_t)(word * 64 + bit));
+            bits &= bits - 1;
+        }
     }
 
     ImGui::BeginChild("##bplist", ImVec2(0, 120), true);
@@ -324,8 +329,8 @@ void DebuggerUI::DrawScrollableDisassembler(bool* debuggerOpen) {
         if (ImGui::BeginPopupContextItem()) {
             if (ImGui::MenuItem("Add Breakpoint"))   showAddBreakpointDialog = true;
             if (ImGui::MenuItem("Remove Breakpoint"))
-                dbgCtx->breakpoints[bpAddr].store(false, std::memory_order_relaxed);
-            if (ImGui::MenuItem("Go To"))            GoTo(bpAddr);
+                dbgCtx->ClearBreakpoint(bpAddr);
+            if (ImGui::MenuItem("Go To")) GoTo(bpAddr);
             ImGui::EndPopup();
         }
     }
