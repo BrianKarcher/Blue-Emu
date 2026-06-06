@@ -25,6 +25,7 @@ public:
 	void GoTo(uint16_t addr);
 private:
 	bool showGoToAddressDialog = false;
+	bool showAddBreakpointDialog = false;
 	ImGuiIO& io;
 	uint16_t contextMenuAddr = 0;
 	uint8_t *log;

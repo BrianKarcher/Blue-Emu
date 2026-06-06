@@ -411,6 +411,9 @@ void Core::RunMessageLoop()
                     if (ImGui::MenuItem("Debugger", nullptr)) {
                         _uiWindows.debuggerOpen = !_uiWindows.debuggerOpen;
                     }
+                    if (ImGui::MenuItem("CPU Log", nullptr)) {
+                        _uiWindows.cpuLogOpen = !_uiWindows.cpuLogOpen;
+                    }
 
                     ImGui::EndMenu();
                 }
@@ -473,6 +476,27 @@ void Core::RunMessageLoop()
                         _dbgCtx->continue_requested.store(true);
                     }
                 }
+                ImGui::End();
+            }
+
+            // CPU Instruction Log Window
+            context.instruction_log_enabled.store(_uiWindows.cpuLogOpen, std::memory_order_relaxed);
+            if (_uiWindows.cpuLogOpen) {
+                ImGui::SetNextWindowSize(ImVec2(600, 300), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(300, 400), ImGuiCond_FirstUseEver);
+                ImGui::Begin("CPU Log", &_uiWindows.cpuLogOpen);
+                std::deque<std::string> log;
+                context.get_instruction_log(log);
+                ImGui::BeginChild("##log_scroll", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+                if (_dbgCtx->is_paused.load(std::memory_order_relaxed)) {
+                    for (const auto& line : log) {
+                        ImGui::TextUnformatted(line.c_str());
+                    }
+                    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+                        ImGui::SetScrollHereY(1.0f);
+                    }
+                }
+                ImGui::EndChild();
                 ImGui::End();
             }
 

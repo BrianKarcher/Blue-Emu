@@ -198,6 +198,34 @@ void DebuggerUI::DrawScrollableDisassembler(bool* debuggerOpen) {
         ImGui::EndPopup();
     }
 
+    if (showAddBreakpointDialog) {
+        ImGui::OpenPopup("Add Breakpoint");
+        showAddBreakpointDialog = false;
+    }
+
+    if (ImGui::BeginPopupModal("Add Breakpoint", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static char bpAddrBuf[5] = "";
+        ImGui::Text("Enter PC (hex):");
+
+        if (ImGui::IsWindowAppearing()) {
+            memset(bpAddrBuf, 0, sizeof(bpAddrBuf));
+            ImGui::SetKeyboardFocusHere();
+        }
+
+        bool confirm = ImGui::InputText("##bpaddr", bpAddrBuf, sizeof(bpAddrBuf),
+            ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_EnterReturnsTrue);
+        if (confirm || ImGui::Button("OK")) {
+            if (bpAddrBuf[0] != '\0') {
+                uint16_t addr = (uint16_t)std::strtol(bpAddrBuf, nullptr, 16);
+                dbgCtx->breakpoints[addr].store(true, std::memory_order_relaxed);
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+
     // Use a table for easy alignment
     static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
         ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable;
@@ -266,5 +294,42 @@ void DebuggerUI::DrawScrollableDisassembler(bool* debuggerOpen) {
         }
         ImGui::EndTable();
     }
+
+    // --- Breakpoints List ---
+    ImGui::Separator();
+    ImGui::Text("Breakpoints");
+
+    std::vector<uint16_t> activeBreakpoints;
+    for (int i = 0; i < 0x10000; ++i) {
+        if (dbgCtx->breakpoints[i].load(std::memory_order_relaxed))
+            activeBreakpoints.push_back((uint16_t)i);
+    }
+
+    ImGui::BeginChild("##bplist", ImVec2(0, 120), true);
+
+    if (ImGui::BeginPopupContextWindow(nullptr,
+            ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems)) {
+        if (ImGui::MenuItem("Add Breakpoint")) showAddBreakpointDialog = true;
+        ImGui::EndPopup();
+    }
+
+    if (activeBreakpoints.empty()) {
+        ImGui::TextDisabled("No breakpoints set");
+    }
+
+    for (uint16_t bpAddr : activeBreakpoints) {
+        char bpStr[8];
+        sprintf_s(bpStr, "$%04X", bpAddr);
+        ImGui::Selectable(bpStr, false);
+        if (ImGui::BeginPopupContextItem()) {
+            if (ImGui::MenuItem("Add Breakpoint"))   showAddBreakpointDialog = true;
+            if (ImGui::MenuItem("Remove Breakpoint"))
+                dbgCtx->breakpoints[bpAddr].store(false, std::memory_order_relaxed);
+            if (ImGui::MenuItem("Go To"))            GoTo(bpAddr);
+            ImGui::EndPopup();
+        }
+    }
+
+    ImGui::EndChild();
     ImGui::End();
 }

@@ -121,6 +121,7 @@ private:
 		bool cpuOpen = true;
 		bool hexOpen = true;
 		bool debuggerOpen = true;
+		bool cpuLogOpen = false;
 	};
 
 	UIWindows _uiWindows;
