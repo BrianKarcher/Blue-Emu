@@ -80,6 +80,7 @@ struct RendererState {
 	uint8_t spritePatternTableHigh[8];
 	uint16_t spritePatternAddrLow[8];
 	uint16_t spritePatternAddrHigh[8];
+	bool skipNextVBlankSet;
 };
 
 struct NesPpuState {

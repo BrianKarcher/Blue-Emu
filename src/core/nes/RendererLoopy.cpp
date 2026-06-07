@@ -38,6 +38,7 @@ void RendererLoopy::reset() {
     m_frameComplete = false;
     hasOverflowBeenSet = false;
     hasSprite0HitBeenSet = false;
+	_skipNextVBlankSet = false;
 
     // Background shift registers and tile fetch pipeline
     m_shifts = {};
@@ -128,6 +129,10 @@ uint16_t RendererLoopy::getNesPpuAddr() {
 void RendererLoopy::ppuReadStatus() {
     // w:                   <- 0
     loopy.w = false;
+    // "Reading the flag on the dot before it is set (scanling 241, dot 0) causes it to read as 0 and be cleared"
+    if (m_scanline == 241 && dot == 0) {
+        _skipNextVBlankSet = true;
+    }
 }
 
 // Increment coarse X (only when rendering is enabled)
@@ -382,13 +387,16 @@ void RendererLoopy::clock(uint32_t* buffer) {
     if (m_scanline >= 240 && m_scanline < 261) {
         // NMI and such has to happen for the CPU to function.
         if (m_scanline == 241 && dot == 1) {
-            m_ppu->m_ppuStatus |= NesPpuSTATUS_VBLANK;
-            m_frameComplete = true;
-            // Inform EmulatorCore of frame completion.
-            m_frameTick = true;
-            if (m_ppu->m_ppuCtrl & NMI_ENABLE) {
-                m_bus->cpu.setNMI(true);
+            if (!_skipNextVBlankSet) {
+                m_frameComplete = true;
+                // Inform EmulatorCore of frame completion.
+                m_frameTick = true;
+                m_ppu->m_ppuStatus |= NesPpuSTATUS_VBLANK;
+                if (m_ppu->m_ppuCtrl & NMI_ENABLE) {
+                    m_bus->cpu.setNMI(true);
+                }
             }
+			_skipNextVBlankSet = false;
         }
         // This path is HOT. We need every cycle we can get. An else branch is costlier.
 		// A bit taboo but sometimes you have to break the rules for performance.
@@ -850,6 +858,7 @@ void RendererLoopy::Serialize(Serializer& serializer) {
 	state._frameCount = _frameCount;
 	state.ppumask = ppumask;
     state.dot = dot;
+    state.skipNextVBlankSet = _skipNextVBlankSet;
     memcpy(state.secondaryOAM, secondaryOAM, 0x20);
     for (int i = 0; i < 8; ++i) {
 		state.spritePatternAddrHigh[i] = spritePatternAddrHigh[i];
@@ -885,6 +894,7 @@ void RendererLoopy::Deserialize(Serializer& serializer) {
 	_frameCount = state._frameCount;
 	ppumask = state.ppumask;
 	dot = state.dot;
+	_skipNextVBlankSet = state.skipNextVBlankSet;
     memcpy(secondaryOAM, state.secondaryOAM, 0x20);
     for (int i = 0; i < 8; ++i) {
 		spritePatternAddrHigh[i] = state.spritePatternAddrHigh[i];

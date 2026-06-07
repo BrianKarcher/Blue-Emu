@@ -84,6 +84,7 @@ public:
     bool isFrameComplete() { return m_frameComplete; }
     void setFrameComplete(bool complete) { m_frameComplete = complete; }
     uint16_t get_attribute_address(LoopyRegister& regV);
+    bool _skipNextVBlankSet = false;
 
     void setMapper(A12Mapper* mapper) {
         m_mapper = mapper;
