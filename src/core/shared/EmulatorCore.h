@@ -5,7 +5,7 @@
 #include "SharedContext.h"
 #include <thread>
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(EMULATORCORE_DEBUG)
 #define LOG(...) dbg(__VA_ARGS__)
 #else
 #define LOG(...) do {} while(0) // completely removed by compiler

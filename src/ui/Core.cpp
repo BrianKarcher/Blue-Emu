@@ -449,6 +449,15 @@ void Core::RunMessageLoop()
                 ImGui::Separator();
                 ImGui::Text("PC: %04X", _dbgCtx->lastState.pc);
                 ImGui::Text("SP: %02X", _dbgCtx->lastState.sp);
+                // Stack
+				ImGui::Text("Stack:");
+				std::stringstream ss;
+				for (int i = 0xFF; i > _dbgCtx->lastState.sp; i--) {
+					uint8_t value = _dbgCtx->lastState.stack[(i) & 0xFF];
+                    ss << std::hex << std::setfill('0') << std::setw(2) << (int)value << " ";
+                }
+				// Imgui readonly input box to show stack values in hex
+				ImGui::InputTextMultiline("##stack", (char*)ss.str().c_str(), ss.str().size() + 1, ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 8), ImGuiInputTextFlags_ReadOnly);
 
                 ImGui::Separator();
                 ImGui::Text("NesPpu Flags:");

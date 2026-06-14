@@ -33,6 +33,10 @@ uint8_t HexReadNesPpu(HexViewer hexViewer, uint16_t addr) {
 }
 
 uint8_t HexReadCPU(HexViewer hexViewer, uint16_t addr) {
+	// TODO : Speed this up by caching the snapshot in the DebuggerContext and reading from that instead of peeking the bus every time.
+    // It's not as easy as it sounds because we address the whole 65K space through memory mappers.
+    // We have issues such as some addresses being mirrored in a range.
+    // Address mirroring is console specific.
 	return hexViewer._bus->peek(addr);
 }
 
