@@ -5,7 +5,7 @@
 
 //#define MMC1DEBUG
 
-#if defined(_DEBUG) && defind(MMC1DEBUG)
+#if defined(_DEBUG) && defined(MMC1DEBUG)
 #define LOG(...) dbg(__VA_ARGS__)
 #else
 #define LOG(...) do {} while(0) // completely removed by compiler

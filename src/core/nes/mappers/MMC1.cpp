@@ -31,7 +31,7 @@ void MMC1::initialize(uint8_t* prg_rom_data, size_t prg_rom_size, uint8_t* chr_r
 		boardType = BoardType::SNROM;   // 128KB PRG, CHR-RAM
 	}
 	else if (prgBank16kCount == 32) {
-		boardType = BoardType::SUROM;   // 512KB PRG, 0KB CHR-ROM
+		boardType = BoardType::SUROM;   // 512KB PRG, CHR-RAM
 	}
 	else {
 		boardType = BoardType::GenericMMC1;
@@ -147,8 +147,23 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 		}
 		
 		if (boardType == BoardType::SUROM) {
+			uint8_t prev = suromPrgOuterBank;
 			suromPrgOuterBank = (val & 0x10);
-			LOG(L"SUROM: CHR bank 0 set, outer PRG bank = %d\n", suromPrgOuterBank ? 1 : 0);
+#if defined(_DEBUG)
+			if (prev != suromPrgOuterBank) {
+				// switchBank: which physical bank was at $8000 when this write happened
+				uint8_t switchBank = (prgBankReg & 15) | prev;
+				wchar_t buf[192];
+				swprintf_s(buf,
+					L"[MMC1 SUROM] CHR0 write addr=%04X val=%02X "
+					L"outer: %d->%d fixedBank: %d->%d switchBank(was): %d prgBankReg: %d\n",
+					addr, val,
+					prev ? 1 : 0, suromPrgOuterBank ? 1 : 0,
+					prev ? 31 : 15, suromPrgOuterBank ? 31 : 15,
+					switchBank, prgBankReg);
+				OutputDebugStringW(buf);
+			}
+#endif
 		}
 	}
 	// CHR Bank 1
@@ -159,8 +174,17 @@ void MMC1::processShift(uint16_t addr, uint8_t val) {
 			// CHR bank 1 (4KB)
 			chrBank1Reg = val & 0x1F;
 			if (boardType == BoardType::SUROM) {
+				uint8_t prev = suromPrgOuterBank;
 				suromPrgOuterBank = (val & 0x10);
-				LOG(L"SUROM: CHR bank 1 set, outer PRG bank = %d\n", suromPrgOuterBank ? 1 : 0);
+#if defined(_DEBUG)
+				if (prev != suromPrgOuterBank) {
+					wchar_t buf[128];
+					swprintf_s(buf, L"[MMC1 SUROM] CHR1 write addr=%04X val=%02X outer: %d->%d lastBank: %d->%d\n",
+						addr, val, prev ? 1 : 0, suromPrgOuterBank ? 1 : 0,
+						prev ? 31 : 15, suromPrgOuterBank ? 31 : 15);
+					OutputDebugStringW(buf);
+				}
+#endif
 			}
 		}
 	}

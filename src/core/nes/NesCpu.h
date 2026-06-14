@@ -6,13 +6,13 @@
 
 class DebuggerContext;
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(CPUDEBUG)
 #define LOG(...) dbg(__VA_ARGS__)
 #else
 #define LOG(...) do {} while(0) // completely removed by compiler
 #endif
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(NMIDEBUG)
 #define LOG_NMI(...) dbgNmi(__VA_ARGS__)
 #else
 #define LOG_NMI(...) do {} while(0) // completely removed by compiler

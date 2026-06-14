@@ -6,7 +6,7 @@
 #include "SharedContext.h"
 #include "NesMemoryMapper.h"
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(NesPpuDEBUG)
 #define LOG(...) dbg(__VA_ARGS__)
 #else
 #define LOG(...) do {} while(0) // completely removed by compiler
