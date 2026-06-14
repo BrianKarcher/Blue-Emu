@@ -162,7 +162,7 @@ void MapperBase::SetChrRange(uint16_t startInclusive, uint16_t endExclusive, uin
 	// (0x2000 NesPpu range / 256 bytes = 32 entries)
 	uint8_t startPage = startInclusive >> 8;
 	uint8_t endPage = endExclusive >> 8;
-	LOG(L"Mapper SetChrRange: start=0x%04X end=0x%04X bank=0x%08X\n", startInclusive, endExclusive, bankOffset);
+	//LOG(L"Mapper SetChrRange: start=0x%04X end=0x%04X bank=0x%08X\n", startInclusive, endExclusive, bankOffset);
 	for (int i = startPage; i < endPage; i++) {
 		// Calculate how many bytes into the requested bank we are
 		uint32_t relativeOffset = (i - startPage) * 256;

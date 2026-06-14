@@ -149,6 +149,8 @@ void NesCpu::cpu_tick() {
 			dbgCtx.lastState.sp = m_sp;
 			dbgCtx.lastState.p = m_p;
 			dbgCtx.lastState.pc = m_pc; // Pointing to the opcode just executed/fetched
+			// TODO Doing this per instruction is slow, consider only doing if in debug mode or when a breakpoint is hit
+			memcpy(dbgCtx.lastState.stack, bus->ramMapper.cpuRAM.data() + 0x100, 0x100); // Stack is always at 0x100-0x1FF
 			current_opcode = ReadByte(m_pc++);
 			if (sharedCtx.instruction_log_enabled.load(std::memory_order_relaxed)) {
 				uint16_t instr_pc = m_pc - 1;

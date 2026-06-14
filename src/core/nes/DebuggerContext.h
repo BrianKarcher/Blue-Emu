@@ -47,6 +47,7 @@ public:
         uint8_t  sp;
         uint8_t  p;
         uint64_t cycle;
+        uint8_t stack[0x100];
     };
 
     struct NesPpuState {
