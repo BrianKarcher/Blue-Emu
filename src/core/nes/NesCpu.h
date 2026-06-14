@@ -1093,11 +1093,11 @@ private:
 			}
 
 			case 5: { // T5: Fetch Vector Low
-				// if NMI is asserted during the first four ticks of a BRK instruction,
-				// the BRK instruction will execute normally at first (PC increments will occur and
-				// the status word will be pushed with the B flag set), but execution will branch to
-				// the NMI vector instead of the IRQ/BRK vector
-				if (cpu.nmi_need) {
+				// Latch the NMI-hijack decision here. nmi_need can be set by the PPU
+				// between T5 and T6, which would produce a chimeric vector (BRK low +
+				// NMI high). Real hardware latches the choice once at T5.
+				cpu.page_crossed = cpu.nmi_need; // borrow page_crossed as a 1-cycle latch
+				if (cpu.page_crossed) {
 					cpu.addr_low = cpu.ReadByte(0xFFFA);
 				}
 				else {
@@ -1109,7 +1109,7 @@ private:
 				return false;
 			}
 			case 6: // T6: Fetch Vector High and Jump
-				if (cpu.nmi_need) {
+				if (cpu.page_crossed) { // use the latched decision, not the live flag
 					cpu.addr_high = cpu.ReadByte(0xFFFB);
 					cpu.nmi_need = false; // Clear NMI request
 				}

@@ -236,8 +236,8 @@ void MMC1::RecomputePrgMappings() {
 	break;
 
 	case 2:
-		// First 16KB fixed at $8000
-		MapperBase::SetPrgPage(0, 0);
+		// First 16KB fixed at $8000: for SUROM, first bank of the active 256KB half (0 or 16)
+		MapperBase::SetPrgPage(0, (boardType == BoardType::SUROM) ? suromPrgOuterBank : 0);
 		MapperBase::SetPrgPage(1, prgBank);
 		break;
 
